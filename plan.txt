@@ -1,0 +1,8 @@
+6/21/2024- Friday
+Plan today!!!!
+
+1. Rotate to centerline
+2. Implement new file format
+2.5 Abstract to mesh
+3. Iteratively rotate
+4. Tweak visuals
