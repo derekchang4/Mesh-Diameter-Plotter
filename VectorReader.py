@@ -62,41 +62,7 @@ def readVertex(file):
     z = sciToFloat(point[2])
     return (x, y, z)
 
-## I'll make a vector class soon
-
 # def storeVector
 # def open # loads the file in
 # def run
 # def save
-
-
-vectorMap = readVectors("./cyclinder_test.stl")
-print(len(vectorMap), "Vertices")
-print("Longest axis: ", va.greatestSpan(vectorMap))
-centroids, vectorList = va.findCentroids(vectorMap)
-
-ax = plt.axes(projection= '3d')
-ax.scatter(0, 0, 0, s=20, color="black")
-centroids = np.array(centroids)
-vectorList = np.array(vectorList)
-
-vp.plotCentroids(centroids, ax)
-#va.rotate(vectorList, 90, 0)
-vp.plotMesh(vectorList, ax)
-vp.plotCenterLine(centroids, ax)
-
-ax.margins(.2, .2, .2)
-plt.show()
-
-
-
-
-# ## Test for sign-mantissa conversion
-# value = "7.06098e-01"
-# idx = value.find("e")
-# numVal = float(value[:idx])
-# exp = int(value[idx + 1:])
-# numVal *= 10 ** exp
-# print("Exponent: ", exp)
-# print("Original:", value)
-# print("Post-exponentiated:", numVal)

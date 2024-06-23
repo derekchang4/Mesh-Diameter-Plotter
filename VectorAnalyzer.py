@@ -179,9 +179,12 @@ def setToOrigin(sortedVL, dirVector, axisIdx):
 
 # Rotates the mesh by given number of degrees
 # about the given axis
-def rotate(vectorList, theta, axisIdx):
-    # Convert to radians since sin,cos expect that
-    thetaRadians = theta * np.pi / 180
+def rotate(vectorList, theta, axisIdx, radians= False):
+    if radians == False:
+        # Convert to radians since sin,cos expect that
+        thetaRadians = theta * np.pi / 180
+    else:
+        thetaRadians = theta
     Rx = np.array([[1, 0, 0],
                   [0, np.cos(thetaRadians), -np.sin(thetaRadians)],
                   [0, np.sin(thetaRadians), np.cos(thetaRadians)]]
@@ -204,21 +207,63 @@ def findFit():
 
 ### Track rotation later
 #Fit the line of the centroids to be parallel with the axis
-def fitGeometry(axisIdx, dirVector, centroids):
+def fitGeometry(axisIdx, centroids, dirVector, datamean, vectorList):
     # Centroids sorted by height due to slicing
     pt = centroids[0] 
-    coords = [False, False, False]
-    coords[axisIdx] = True
-    for axis in coords:
-        if axis == True:
-            np.arctan(pt[axisIdx] / pt[])
-            rotate()
+    # We need the longest axis paired with the other 2
+
+    # True means it's been used; ie not to be used
+    axes = [False, False, False]
+    axes[axisIdx] = True
+    origin = findPointAlongLine(dirVector, axisIdx, datamean)
+    print("Point:", pt)
+    print("Line origin:", origin)
+    for count, axis in enumerate(axes):
+        if axis == False:
+            # Get angle of rotation
+            # (np.pi / 2) - 
+            print("Comparing axis", axisIdx, "and", count)
+            print(f"Difference ({pt[axisIdx] - origin[axisIdx]}, {pt[count] - origin[count]}")
+            theta = np.arctan((pt[axisIdx] - origin[axisIdx]) / (pt[count] - origin[count]))
+            rotationTheta = None
+            # Rotate to vertical depending the closer rotation
+            if (theta >= 0):
+                rotationTheta = (np.pi / 2) - theta
+            else:
+                rotationTheta = -(np.pi / 2) - theta
+            print(theta, "radians from axis")
+            print(f"Rotating by {rotationTheta} radians to fit")
+            # Mark axis
+            axes[count] = True
+            rotationAxis = None
+            # Get other axis to rotate about
+            for idx, status in enumerate(axes):
+                if (status == False):
+                    rotationAxis = idx
+                    print("Rotated about axis", idx)
+            rotate(vectorList, rotationTheta, rotationAxis, True)
+            # Unmark so the next rotation can use this axis
+            axes[count] = False
+
 
 # Finds a point along some line given the values of
-# one coordinate
-def findPointAlongLine(dirVector, axisIdx, axisVal):
+# one coordinate and a point
+def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0):
+    # y = dirVector(x, y, z) + (datamean)
+
+    # t is the scalar at which that axis hits 0
+    t = (-datamean[axisIdx]) / dirVector[axisIdx]
+    print("t at coord[", axisIdx,"] = 0 is ", t)
+    foundPoint = (dirVector * t) + datamean
+    print("Point found:", foundPoint)
+    # scalar = point[axisIdx] / dirVector[axisIdx]
+    # t = (axisVal - datamean) / dirVector
+    # point = dirVector * desiredValue
+    return foundPoint
+    
 
 #! Not tested
+# may need to add datamean
 def calculateDiameter(axisIdx, sortedVL, dirVector):
     dirVector = np.array(dirVector)
     # Axis length to avg diameter at that length
@@ -229,7 +274,8 @@ def calculateDiameter(axisIdx, sortedVL, dirVector):
     for k in slices:
         totalDiameter = 0
         while k[0] == v[axisIdx]:
-            scalar = v[axisIdx] / dirVector[axisIdx]    # This is how much we need to multiply
+            scalar = v[axisIdx] / dirVector[axisIdx]    
+            # This is how much we need to multiply
             # the direction vector by to get to the same plane as v[axisIdx]
             center = dirVector * scalar
             print(v, "vs", center)

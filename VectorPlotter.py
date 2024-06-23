@@ -47,4 +47,9 @@ def plotCenterLine(centroids, ax):
     linepts += datamean
     print("input to plot3d:", *linepts.T)
     ax.plot3D(*linepts.T)
-    return vv[0]    # Use this direction vector elsewhere
+    return vv[0], datamean
+    # Use this direction vector elsewhere + datamean
+
+# Takes in an axes object
+def clearPlot(ax):
+    ax.cla()
