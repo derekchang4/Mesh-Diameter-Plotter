@@ -24,6 +24,7 @@ class Mesh:
         self.VECTORMAP    = None
         self.VECTORCOUNT  = None
         self.OGVECTORLIST = None
+        self.ITERATIONNUM = ITERATIONNUM
 
         # Updates as the object rotates
         self.axisIdx      = None
@@ -72,10 +73,10 @@ class Mesh:
 
     # Straightens the channel iteratively until threshold in Geometry.py
     # Then calculates the diameters across the axis
-    def straighten(self):
+    def straighten(self, resolution):
         ax1 = plt.axes(projection = '3d')
         plt.title("Original")
-        vp.plotMesh(self.vectorList, ax1)
+        vp.plotMesh(self.vectorList, ax1, resolution)
         plt.show()
         iteration = 1
         self.fitGeometry()
@@ -89,14 +90,14 @@ class Mesh:
             print(f"Iteration: {iteration}")
             print(f"Rotation: {self.curRotation} =  {rotationSum}")
             print(f"Total rotation = {self.totalRotation}")
-            if iteration % ITERATIONNUM == 0:
+            if iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
-                self.plot()
+                self.plot(resolution)
         print(f"\nThreshold reached ({THRESHOLD})")
         print(f"  Last rotation: {self.curRotation} = {rotationSum}")
         print(f"  Total rotation: {self.totalRotation}")
         plt.title("Straightened")
-        self.plot()
+        self.plot(resolution)
 
 
 
@@ -105,27 +106,29 @@ class Mesh:
         self.findCentroids()
         vp.plotCentroids(self.centroids, ax)
 
-    def plotMesh(self, ax):
-        vp.plotMesh(self.vectorList, ax)
+    def plotMesh(self, ax, resolution = 1):
+        vp.plotMesh(self.vectorList, ax, resolution)
 
     def plotCenterLine(self, ax, min = -10, max= 10):
-        self.sortPoints()
         min = self.vectorList[-1][self.axisIdx]
         max = self.vectorList[0][self.axisIdx]
-        vp.plotCenterLine(self.centroids, ax, min, max)
+        print(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}")
+        vp.plotCenterLine(self.centroids, ax, min, max, self.axisIdx)
 
-    def plot(self):
+    def plot(self, resolution = 1):
         ax1 = plt.axes(projection = '3d')
         self.plotCentroids(ax1)
+        print(f"datamean: {self.datamean}")
         self.plotCenterLine(ax1)
-        self.plotMesh(ax1)
+        self.plotMesh(ax1, resolution)
         plt.show()
 
     def plotDiameter(self):
         ax = plt.axes()
-        self.sortPoints()
-        avgDiameter = va.calculateDiameter(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
+        self.findCentroids()
+        avgDiameter, centers = va.calculateDiameter(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
         vp.plotDiameter(ax, avgDiameter)
+        
         axis = None
         match self.axisIdx:
             case 0:
@@ -143,5 +146,20 @@ class Mesh:
         plt.title("Diameter across the longest axis")
         plt.show()
 
-def updateIterationShown(iteration):
-    ITERATIONNUM = iteration
+        # Showing centers in relation
+        x = []
+        y = []
+        z = []
+        for v in centers:
+            x.append(v[0])
+            y.append(v[1])
+            z.append(v[2])
+        ax1 = plt.axes(projection= '3d')
+        self.plotMesh(ax1, .001)
+        ax1.scatter(x, y, z)
+        print(f"Centers: {len(centers)}")
+        plt.title("Centers")
+        plt.show()
+
+    def updateIterationShown(self, iteration):
+        self.ITERATIONNUM = iteration

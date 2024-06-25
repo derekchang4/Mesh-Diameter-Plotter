@@ -70,10 +70,10 @@ def bigCylinderTest():
     mesh.plotDiameter()
 
 def main():
-    mesh = geo.Mesh("files/rotatedMPCylinder.stl")
+    mesh = geo.Mesh("files/bottom.wrl")
     mesh.readVectors()
-    geo.updateIterationShown(1)
-    mesh.straighten()
+    mesh.updateIterationShown(1)
+    mesh.straighten(.001)
     mesh.plotDiameter()
 
 main()

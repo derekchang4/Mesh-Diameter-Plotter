@@ -306,10 +306,10 @@ def fitGeometry(mesh, debug = False):
 # Finds a point along some line given the values of
 # one coordinate and a point
 def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0, debug = False):
-    # y = dirVector(x, y, z) + (datamean)
+    # (x, y, z) = dirVector * t + (datamean)
 
     # t is the scalar at which that axis hits 0
-    t = (-datamean[axisIdx]) / dirVector[axisIdx]
+    t = (axisVal -datamean[axisIdx]) / dirVector[axisIdx]
     dprint(f"t at coord[{axisIdx}] = 0 is {t}", debug)
     foundPoint = (dirVector * t) + datamean
     dprint(f"Point found: {foundPoint}", debug)
@@ -323,6 +323,7 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean):
     dirVector = np.array(dirVector)
     # Axis length to avg diameter at that length
     avgDiameter = {}
+    centers = []
     slices = slicePoints(axisIdx, sortedVL)
     it = iter(sortedVL)
     v = next(it)
@@ -331,15 +332,18 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean):
         totalDiameter = 0
         # print(f"k = {k}  v = {v}")
         while k[0] == v[axisIdx]:
-            scalar = v[axisIdx] / (dirVector[axisIdx] + datamean[axisIdx])    
+            # scalar = v[axis] - datamean / dirVector
+            ## Wrong! -> scalar = v[axisIdx] / (dirVector[axisIdx] + datamean[axisIdx]) 
+            scalar = (v[axisIdx] - datamean) / dirVector[axisIdx]    
             # This is how much we need to multiply
             # the direction vector by to get to the same plane as v[axisIdx]
             center = dirVector * scalar + datamean
             i += 1
             if (len(sortedVL) < SKIPLEN):
                 print(v, "vs", center)
-            elif i % NTHTERM == 0:
-                print(v, "vs", center)
+            elif i % (NTHTERM * 5) == 0:
+                centers.append(center)
+                print("Shortened", v, "vs", center)
             # Euclidean distance using numpy
             dist = np.linalg.norm(v - center)
             totalDiameter += dist * 2
@@ -350,7 +354,7 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean):
                 break
         avgDiameter[k[0]] = totalDiameter / k[1]    # divide the diameter total by num of points
     # Returns dict of lengths along longest axis to avg diameters
-    return avgDiameter
+    return avgDiameter, centers
         
 
 print("Vector Analyzer imported")

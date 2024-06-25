@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import Constants as c
+import VectorAnalyzer as va
 
 NTHTERM = c.NTHTERM
 SKIPLEN = 300
 
-def dprint(string, print = False):
-    if (print):
+def dprint(string, debug = False):
+    if (debug):
         print(string)
 
 def plotCentroids(centroids, ax):
@@ -26,15 +27,28 @@ def plotCentroids(centroids, ax):
     ptsZ = np.array(ptsZ)
     ax.scatter(ptsX, ptsY, ptsZ)
 
-def plotMesh(vectorList, ax):
+def plotMesh(vectorList, ax, resolution = 1):
+    print(f"Resolution {resolution}")
     # VectorList should be numpy array
     ptsX = []
     ptsY = []
     ptsZ = []
-    for v in vectorList:
-        ptsX.append(v[0])
-        ptsY.append(v[1])
-        ptsZ.append(v[2])
+    if (resolution == 1):
+        for v in vectorList:
+            ptsX.append(v[0])
+            ptsY.append(v[1])
+            ptsZ.append(v[2])
+    else:
+        i = 0
+        n = 1 // resolution
+        print(f"Plotting every {n}th point")
+        for v in vectorList:
+            if (i % n == 0):
+                ptsX.append(v[0])
+                ptsY.append(v[1])
+                ptsZ.append(v[2])
+            i += 1
+
     ptsX = np.array(ptsX)
     ptsY = np.array(ptsY)
     ptsZ = np.array(ptsZ)
@@ -42,7 +56,7 @@ def plotMesh(vectorList, ax):
     ax.scatter(ptsX, ptsY, ptsZ)
 
 
-def plotCenterLine(centroids, ax, min, max, debug = False):
+def plotCenterLine(centroids, ax, min, max, axisIdx, debug = False):
     centroids = np.array(centroids)
     print(f"Plot centerline centroids: {centroids}")
     print(centroids.size)
@@ -50,7 +64,6 @@ def plotCenterLine(centroids, ax, min, max, debug = False):
         print("Error: Call findCentroids() first! The direction vector, datamean, and centroids haven't been found yet!")
         quit()
     # Finding line of best fit
-    print(centroids)
     datamean = centroids.mean(axis= 0)
     #print(datamean)
 
@@ -59,11 +72,14 @@ def plotCenterLine(centroids, ax, min, max, debug = False):
     uu, dd, vv = np.linalg.svd(centroids - datamean)
 
     # Now generate points for plotting
-    linepts = vv[0] * np.mgrid[min:max:2j][:, np.newaxis]
+    #point1 = va.findPointAlongLine(vv[0], axisIdx, datamean, min)
+    #point2 = va.findPointAlongLine(vv[0], axisIdx, datamean, max)
+    #print(f"POINTS: {point1} {point2}")
+    #linepts = vv[0] * np.array([point1, point2]) + datamean
+    linepts = vv[0] * np.mgrid[min:max:2j][:, np.newaxis] + datamean
     dprint(f"VV[0]= {vv[0]}", debug)
     dprint(f"mgrid= {np.mgrid[min:max:2j][:, np.newaxis]}", debug)
-    dprint(f"linepts= {linepts}", debug)
-    linepts += datamean
+    dprint(f"linepts= {linepts}", True)
     print("input to plot3d:", *linepts.T)
     ax.plot3D(*linepts.T)
 
