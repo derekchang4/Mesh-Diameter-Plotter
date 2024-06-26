@@ -38,7 +38,7 @@ of DMLS prints. While there have been studies exploring various factors that can
 of scans, my work will focus on finding the optimal parameters for scan processing. Such 
 improvements could be generalized to any work involving high precision computed imagery.
 
-In my research, I will find the optimal parameters for processing scans to find the most
+In my research, I will find the optimal thresholding parameters for processing scans to find the most
 accurate separation of materials. Direct Metal Laser Sintering (DMLS) is a manufacturing 
 process that is more flexible than other manufacturing methods. It can build shapes that
 are harder for other methods to produce, which makes it useful for complex microchannels for 

@@ -69,10 +69,11 @@ def bigCylinderTest():
     mesh.straighten()
     mesh.plotDiameter()
 
+
 def main():
     mesh = geo.Mesh("files/bottom.wrl")
     mesh.readVectors()
-    mesh.updateIterationShown(1)
+    #mesh.updateIterationShown(1)
     mesh.straighten(.001)
     mesh.plotDiameter()
 
