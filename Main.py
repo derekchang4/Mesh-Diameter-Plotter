@@ -69,9 +69,35 @@ def bigCylinderTest():
     mesh.straighten()
     mesh.plotDiameter()
 
+def manualRotationTest():
+    mesh = geo.Mesh("files/rotatedCylinder.stl")
+    mesh.readVectors()
+    ax1 = plt.axes(projection= '3d')
+
+    plt.title("Original")
+    mesh.plot()
+
+    print("Starting manual rotation...")
+    print("Input changes in radians in the format -> radians rotationAxis")
+    str = ''
+    while str != 'q':
+        print("Input q to quit")
+        str = input("Enter rotation (radians rotationAxis): ")
+        fields = str.split()
+        try:
+            radians = float(fields[0])
+            axis = int(fields[1])
+        except:
+            if str == 'q':
+                break
+            print("Invalid input! Try again")
+            continue
+        mesh.rotate(radians, axis)
+        mesh.plot()
+        
 
 def main():
-    mesh = geo.Mesh("files/bottom.wrl")
+    mesh = geo.Mesh("files/top.wrl")
     mesh.readVectors()
     #mesh.updateIterationShown(1)
     mesh.straighten(.001)

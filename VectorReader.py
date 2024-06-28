@@ -2,10 +2,10 @@ import VectorAnalyzer as va
 import VectorPlotter as vp
 import matplotlib.pyplot as plt
 import numpy as np
-import Constants as c
+import Constants as const
 #from mpl_toolkits import mplot3d
 
-NTHLINE = c.NTHLINE
+NTHLINE = const.NTHLINE
 
 # This file reads an stl file and produces a list of all
 # vertexes contained in the mesh. Excludes duplicate vertexes
@@ -49,11 +49,11 @@ def readVectorsWRL(fileName):
     i = 0
     while line != "##SWITCHED_OBJECTS_POINT_ARRAY\n" and i < 200:
         line = file.readline()
-        print(line, end='')
+        #print(line, end='')
         i += 1
     if (i == 200):
         quit()
-    print("\n\n\nPoints")
+    print("\nPoints")
     i = 0
     line = file.readline().strip().rstrip(',')
     while line != ']':
@@ -61,8 +61,8 @@ def readVectorsWRL(fileName):
         map[point] = map.get(point, 0) + 1
         line = file.readline().strip().rstrip(',')
         i += 1
-        if (i % NTHLINE == 0):
-            print(f"Point: {point}")
+        #if (i % NTHLINE == 0):
+        #    print(f"Point: {point}")
     file.close()
     return map
 

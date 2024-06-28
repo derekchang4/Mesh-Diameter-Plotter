@@ -2,7 +2,7 @@
 
 ###     Rotation    ###
 ## Abs value
-THRESHOLD = .005    # The threshold for change in rotation in radians
+THRESHOLD = .1      # The threshold for change in arclength
 ITERATIONNUM = 3    # The nth iteration to plot display
 
 ###     Analysis    ###

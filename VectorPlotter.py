@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import Constants as c
+import Constants as const
 import VectorAnalyzer as va
 
-NTHTERM = c.NTHTERM
+NTHTERM = const.NTHTERM
 SKIPLEN = 300
 
 def dprint(string, debug = False):
@@ -27,8 +27,8 @@ def plotCentroids(centroids, ax):
     ptsZ = np.array(ptsZ)
     ax.scatter(ptsX, ptsY, ptsZ)
 
-def plotMesh(vectorList, ax, resolution = 1):
-    print(f"Resolution {resolution}")
+def plotMesh(vectorList, ax, resolution):
+    #print(f"Resolution {resolution}")
     # VectorList should be numpy array
     ptsX = []
     ptsY = []
@@ -58,8 +58,7 @@ def plotMesh(vectorList, ax, resolution = 1):
 
 def plotCenterLine(centroids, ax, min, max, axisIdx, debug = False):
     centroids = np.array(centroids)
-    print(f"Plot centerline centroids: {centroids}")
-    print(centroids.size)
+    dprint(f"Plot centerline centroids: {centroids}", debug)
     if centroids is None or centroids.size == 0:
         print("Error: Call findCentroids() first! The direction vector, datamean, and centroids haven't been found yet!")
         quit()
@@ -79,8 +78,8 @@ def plotCenterLine(centroids, ax, min, max, axisIdx, debug = False):
     linepts = vv[0] * np.mgrid[min:max:2j][:, np.newaxis] + datamean
     dprint(f"VV[0]= {vv[0]}", debug)
     dprint(f"mgrid= {np.mgrid[min:max:2j][:, np.newaxis]}", debug)
-    dprint(f"linepts= {linepts}", True)
-    print("input to plot3d:", *linepts.T)
+    dprint(f"linepts= {linepts}", debug)
+    #print("input to plot3d:", *linepts.T)
     ax.plot3D(*linepts.T)
 
 # Takes in a dictionary of x value to avg diameter
@@ -99,6 +98,10 @@ def plotDiameter(ax, avgDiameter):
             print(f"[{v[0]} : {v[1]}]")
         i += 1
         
+def plotAxes(ax, length):
+    ax.plot3D([0, length],  [0, 0], [0, 0], c = 'r')
+    ax.plot3D([0, 0], [0, length], [0, 0], c = 'gold')
+    ax.plot3D([0, 0], [0, 0], [0, length], c = 'b')
 
 # Takes in an axes object and clears it
 def clearPlot(ax):

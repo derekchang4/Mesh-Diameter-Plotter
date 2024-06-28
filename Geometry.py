@@ -3,7 +3,7 @@
 import VectorReader as vr
 import VectorAnalyzer as va
 import VectorPlotter as vp
-import Constants as c
+import Constants as const
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 # THRESHOLD = .005 # Threshold for change in rotation in radians
 # ITERATIONNUM = 3 # The nth iteration to display
 
-THRESHOLD = c.THRESHOLD
-ITERATIONNUM = c.ITERATIONNUM
+THRESHOLD = const.THRESHOLD
+ITERATIONNUM = const.ITERATIONNUM
 
 ## This class represents a mesh geometry file and will include 
 # a set of vectors and anything else that might need to be stored.
@@ -27,17 +27,22 @@ class Mesh:
         self.ITERATIONNUM = ITERATIONNUM
 
         # Updates as the object rotates
-        self.axisIdx      = None
-        self.greatestSpan = None  # tracks the axis of greatest span and the units it spans
-        self.vectorList   = None  # required for sorting and ordering; current position
-        self.centroids    = None  # represents the centroids of the slices of the channel
-        self.datamean     = None  # represents the center of the channel
-        self.dirVector    = None  # represents the slope of the centerline
+        self.axisIdx        = None
+        self.greatestSpan   = None  # tracks the axis of greatest span and the units it spans
+        self.vectorList     = None  # required for sorting and ordering; current position
+        self.centroids      = None  # represents the centroids of the slices of the channel
+        self.datamean       = None  # represents the center of the channel
+        self.dirVector      = None  # represents the slope of the centerline
         self.totalRotation     = [0, 0, 0]  # tracks the rotation applied to the original mesh (in radians)
         self.curRotation       = [0, 0, 0]  # the amount the object was rotated by the current iteration
+        self.sorted         = False # tracks if the vectorList has been sorted
+        self.centroidsFound = False # tracks if the centroids have been computed
+        self.change         = None
+
+        # Post straightened data
+        self.slices         = None  # A vector list with points separated by slices
 
     def readVectors(self):
-        self.VECTORMAP
         if (".stl" in self.filename.lower()):
             print("[STL FILE]")
             self.VECTORMAP = vr.readVectors(self.filename)
@@ -61,33 +66,47 @@ class Mesh:
         self.greatestSpan = va.greatestSpan(self)
     
     def sortPoints(self):
+        # Don't sort if already sorted
+        if (self.sorted):
+            return
         self.vectorList = va.sortPoints(self.axisIdx, self.vectorList)
+        self.sorted = True
 
     def findCentroids(self):
+        if self.centroidsFound == True:
+            return
         self.centroids, self.vectorList = va.findCentroids(self)
         va.findCenterline(self)
+        self.sorted = True  # Finding the centroids sorts the points
+        self.centroidsFound = True
 
     def fitGeometry(self):
         self.findCentroids()
         va.fitGeometry(self)
+        self.sorted = False # Rotation mixes points
+        self.centroidsFound = False # centroids must be recomputed 
 
     # Straightens the channel iteratively until threshold in Geometry.py
     # Then calculates the diameters across the axis
-    def straighten(self, resolution):
+    def straighten(self, resolution = 1):
+        print(f"Resolution {resolution}")
         ax1 = plt.axes(projection = '3d')
         plt.title("Original")
         vp.plotMesh(self.vectorList, ax1, resolution)
         plt.show()
         iteration = 1
-        self.fitGeometry()
         print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
+        self.fitGeometry()
+        if iteration % self.ITERATIONNUM == 0:
+                plt.title(f"Iteration {iteration}")
+                self.plot(resolution)
         rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
         print(f"Rotation: {self.curRotation} =  {rotationSum}")
-        while rotationSum > THRESHOLD:
+        while not self.atThreshold():
+            iteration += 1
+            print(f"\nIteration: {iteration}")
             self.fitGeometry()
             rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
-            iteration += 1
-            print(f"Iteration: {iteration}")
             print(f"Rotation: {self.curRotation} =  {rotationSum}")
             print(f"Total rotation = {self.totalRotation}")
             if iteration % self.ITERATIONNUM == 0:
@@ -99,9 +118,33 @@ class Mesh:
         plt.title("Straightened")
         self.plot(resolution)
 
+    def atThreshold(self):
+        pt = self.centroids[0] # Take a point from somewhere
+        radius = np.linalg.norm(pt - self.datamean)  # Get the dist
+        c = 0
+        for axisIdx, radians in enumerate(pt):
+            c += (radius * self.curRotation[axisIdx]) ** 2
+        c = np.sqrt(c)
+        self.change = c
+        print(f"Threshold: {c} < {THRESHOLD} = {c < THRESHOLD}")
+
+        if c < THRESHOLD:
+            return True
+        else:
+            return False
+        
+    def rotate(self, theta, rotationAxis, radians = True):
+        if not radians:
+            theta = theta * np.pi / 180
+        va.rotate(self.vectorList, theta, rotationAxis, True)
+
 
 
 ### Plotting
+    def dprint(self, string, debug):
+        if debug:
+            print(string)
+
     def plotCentroids(self, ax):
         self.findCentroids()
         vp.plotCentroids(self.centroids, ax)
@@ -109,19 +152,27 @@ class Mesh:
     def plotMesh(self, ax, resolution = 1):
         vp.plotMesh(self.vectorList, ax, resolution)
 
-    def plotCenterLine(self, ax, min = -10, max= 10):
+    def plotCenterLine(self, ax, min = -10, max= 10, debug = False):
         min = self.vectorList[-1][self.axisIdx]
         max = self.vectorList[0][self.axisIdx]
-        print(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}")
+        self.dprint(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}", debug)
         vp.plotCenterLine(self.centroids, ax, min, max, self.axisIdx)
 
-    def plot(self, resolution = 1):
+    def plot(self, resolution = 1, debug = False):
         ax1 = plt.axes(projection = '3d')
         self.plotCentroids(ax1)
-        print(f"datamean: {self.datamean}")
+        self.dprint(f"\nPlotting", debug)
+        self.dprint(f"datamean: {self.datamean}", debug)
         self.plotCenterLine(ax1)
         self.plotMesh(ax1, resolution)
+        self.plotTargetAxis(ax1, self.axisIdx)
         plt.show()
+    
+    def plotTargetAxis(self, ax, axisIdx):
+        axes = [[0, 0], [0, 0], [0, 0]]
+        axes[axisIdx][1] = self.datamean[axisIdx]
+        vp.plotAxes(ax, self.datamean[axisIdx] / 4)
+        ax.plot3D(axes[0], axes[1], axes[2])
 
     def plotDiameter(self):
         ax = plt.axes()

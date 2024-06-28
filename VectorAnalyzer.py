@@ -11,7 +11,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-import Constants as c
+import Constants as const
 
 # Number of slices for computing centroids
 #SLICES = 5
@@ -21,9 +21,11 @@ import Constants as c
 # Limit before the prints will skip
 #SKIPLEN = 1000
 
-SLICES = c.SLICES
-NTHTERM = c.NTHTERM
-SKIPLEN = c.SKIPLEN
+SLICES = const.SLICES
+NTHTERM = const.NTHTERM
+SKIPLEN = const.SKIPLEN
+
+MINISLICES = 2
 
 def dprint(string, debug = False):
     if (debug):
@@ -77,7 +79,7 @@ def greatestSpan(mesh):
     else:
         print("Error finding span")
         quit()
-    
+
 
 def findCentroids(mesh, debug = False):
     #Sort vectors by x, y, or z parameter
@@ -108,11 +110,8 @@ def findCentroids(mesh, debug = False):
     floor = max - sliceSize
     ceiling = max
     
-    # Iterator to get each next vertex
     # Iteratively get sums of individual x, y, and z
-    # then divide by # vertices to get
-    # the avg x, y, and z per slice
-
+    # then divide by # vertices to get the avg x, y, and z per slice
     it = iter(vectorList)
     v = next(it)
     dprint(f"Span: {mesh.greatestSpan}  SliceSize: {sliceSize}", debug)
@@ -148,7 +147,7 @@ def findCentroids(mesh, debug = False):
                 foundVertices = True
         if foundVertices:
             centroids.append(tuple(centroid))
-        dprint(f"Slice: {i}, numVertices: {numVertices}, centroid: {tuple(centroid)}", True)
+        dprint(f"Slice: {i}, numVertices: {numVertices}, centroid: {tuple(centroid)}", debug)
         #print("Iteration", i, "Floor:", floor)
         floor -= sliceSize
     # print("Min= ", min)
@@ -193,6 +192,7 @@ def slicePoints(axisIdx, vectorList):
     it = iter(vectorList)
     v = next(it)
     slices = {}
+    i = 0
     while v is not None:
         length = v[axisIdx]
         slices[length] = slices.get(length, 0) + 1
@@ -202,6 +202,56 @@ def slicePoints(axisIdx, vectorList):
             print("Finished slicing")
             v = None
     return slices
+
+def sliceMiniSlices(vectorList, axisIdx, greatestSpan):
+    # Expects a sorted list
+    centroids = []
+    
+    sliceSize = greatestSpan / SLICES
+    # List must be sorted
+    it = iter(vectorList)
+    v = next(it)
+    miniSliceSize = sliceSize / MINISLICES
+    boundary = v[axisIdx] - sliceSize
+    miniBoundary = v[axisIdx] - sliceSize
+    # For each slice
+    for i in range(SLICES):
+        miniCentroids = []
+        # Slice them into smaller slices
+        for j in range(MINISLICES):
+            numVerts = 0
+            centroid = [0, 0, 0]
+            # Keep adding points within minislice
+            while v[axisIdx] > miniBoundary:
+                centroid[0] += v[0]
+                centroid[1] += v[1]
+                centroid[2] += v[2]
+                numVerts += 1
+                try:
+                    v = next(it)
+                except:
+                    pass
+            # Get average within the minislice
+            centroid[0] = centroid[0] / numVerts
+            centroid[1] = centroid[1] / numVerts
+            centroid[2] = centroid[2] / numVerts
+            # Add this minicentroid into the current slice
+            miniCentroids.append(centroid)
+            # Shift minislice boundary down
+            if j < MINISLICES - 1:
+                miniBoundary -= miniSliceSize
+            # If at the end of a slice
+            else:
+                # Set to the boundary
+                miniBoundary = boundary
+        # If at end of mesh, set boundary below
+        if i != SLICES - 1:
+            boundary -= sliceSize
+        else:
+            boundary -= sliceSize - 1
+        # 3d list
+        centroids.append(miniCentroids)
+    return centroids
     
 # Sets a point on the centerline at the
 # same level as the lowest point on the mesh
@@ -213,6 +263,8 @@ def setToOrigin(sortedVL, dirVector, axisIdx):
 # Rotates the mesh by given number of degrees
 # about the given axis
 def rotate(vectorList, theta, axisIdx, radians= False):
+    if axisIdx == 1:
+        theta = -theta
     if radians == False:
         # Convert to radians since sin,cos expect that
         thetaRadians = theta * np.pi / 180
@@ -274,7 +326,7 @@ def fitGeometry(mesh, debug = False):
     for count, axis in enumerate(axes):
         if axis == False:
             # Get angle of rotation
-            dprint(f"Comparing axis {axisIdx} and {count}", debug)
+            dprint(f"Comparing axis {axisIdx} and {count}", True)
             dprint(f"Difference ({pt[axisIdx] - origin[axisIdx]}, {pt[count] - origin[count]})", debug)
             theta = np.arctan((pt[axisIdx] - origin[axisIdx]) / (pt[count] - origin[count]))
             rotationTheta = None
@@ -284,8 +336,6 @@ def fitGeometry(mesh, debug = False):
                 rotationTheta = (np.pi / 2) - theta
             else:
                 rotationTheta = -(np.pi / 2) - theta
-            dprint(f"{theta} radians from axis", debug)
-            dprint(f"Rotating by {rotationTheta} radians to fit", debug)
             # Mark axis
             axes[count] = True
             rotationAxis = None
@@ -293,7 +343,9 @@ def fitGeometry(mesh, debug = False):
             for idx, status in enumerate(axes):
                 if (status == False):
                     rotationAxis = idx
-                    dprint(f"Rotated about axis {idx}", debug)
+                    dprint(f"Rotated about axis {idx}", True)
+            dprint(f"Rotating by {np.pi/2} - {theta} = {rotationTheta} radians about ax[{rotationAxis}] to fit", True)
+            dprint(f"{theta} radians from horizontal", True)
             # Add to the total rotation the mesh has experienced
             mesh.totalRotation[rotationAxis] += rotationTheta       
             mesh.curRotation[rotationAxis] = rotationTheta
@@ -317,8 +369,6 @@ def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0, debug = False)
     return foundPoint
     
 
-#! Not tested
-# may need to add datamean
 def calculateDiameter(axisIdx, sortedVL, dirVector, datamean):
     dirVector = np.array(dirVector)
     # Axis length to avg diameter at that length
@@ -343,7 +393,7 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean):
                 print(v, "vs", center)
             elif i % (NTHTERM * 5) == 0:
                 centers.append(center)
-                print("Shortened", v, "vs", center)
+                #print("Shortened", v, "vs", center)
             # Euclidean distance using numpy
             dist = np.linalg.norm(v - center)
             totalDiameter += dist * 2
@@ -356,6 +406,46 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean):
     # Returns dict of lengths along longest axis to avg diameters
     return avgDiameter, centers
         
+def calculateDiameterBySlice(axisIdx, sortedVL, dirVector, datamean, greatestSpan):
+    dirVector = np.array(dirVector)
+    # Axis length to avg diameter at that length
+    avgDiameter = {}
+    centers = []
+    slices = sliceMiniSlices(sortedVL, axisIdx, greatestSpan)
+    it = iter(sortedVL)
+    v = next(it)
+    i = 0
+
+    specifiedWidth = 5
+
+    for k in slices.items():
+        totalDiameter = 0
+        # print(f"k = {k}  v = {v}")
+        while k[0] == v[axisIdx]:
+            # scalar = v[axis] - datamean / dirVector
+            ## Wrong! -> scalar = v[axisIdx] / (dirVector[axisIdx] + datamean[axisIdx]) 
+            scalar = (v[axisIdx] - datamean) / dirVector[axisIdx]    
+            # This is how much we need to multiply
+            # the direction vector by to get to the same plane as v[axisIdx]
+            center = dirVector * scalar + datamean
+            i += 1
+            if (len(sortedVL) < SKIPLEN):
+                print(v, "vs", center)
+            elif i % (NTHTERM * 5) == 0:
+                centers.append(center)
+                #print("Shortened", v, "vs", center)
+            # Euclidean distance using numpy
+            dist = np.linalg.norm(v - center)
+            totalDiameter += dist * 2
+            try:
+                v = next(it)
+            except StopIteration:
+                print("Finished calculating diameter")
+                break
+        avgDiameter[k[0]] = totalDiameter / k[1]    # divide the diameter total by num of points
+    # Returns dict of lengths along longest axis to avg diameters
+    return avgDiameter, centers
+
 
 print("Vector Analyzer imported")
 
