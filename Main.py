@@ -3,13 +3,13 @@ import VectorPlotter as vp
 import VectorReader as vr
 import matplotlib.pyplot as plt
 import numpy as np
-import Geometry as geo
+import Channel as chan
 
 # Setup:
 # 1. Create mesh object with file path
 
 def testingOGCylinder():
-    mesh = geo.Mesh("./cylinder_test.stl")
+    mesh = chan.Channel("./cylinder_test.stl")
     mesh.readVectors()
     print(mesh.VECTORCOUNT, "Vertices")
     mesh.getGreatestSpan()
@@ -36,7 +36,7 @@ def testingOGCylinder():
     plt.show()
 
 def rotatedCylinderTest():
-    mesh = geo.Mesh("files/rotatedCylinder.stl")
+    mesh = chan.Channel("files/rotatedCylinder.stl")
     mesh.readVectors()
     ax1 = plt.axes(projection= '3d')
     #mesh.findCentroids()
@@ -59,18 +59,18 @@ def rotatedCylinderTest():
 
 def bigCylinderTest():
     # HOLY MOLY 652636 Vertices
-    mesh = geo.Mesh("files/middle.wrl")
+    mesh = chan.Channel("files/middle.wrl")
     mesh.readVectors()
     ax = plt.axes(projection= '3d')
     plt.title("Original")
     mesh.plot()
 
-    geo.updateIterationShown(7) # Show every 7th iteration
+    chan.updateIterationShown(7) # Show every 7th iteration
     mesh.straighten()
     mesh.plotDiameter()
 
 def manualRotationTest():
-    mesh = geo.Mesh("files/rotatedCylinder.stl")
+    mesh = chan.Channel("files/rotatedCylinder.stl")
     mesh.readVectors()
     ax1 = plt.axes(projection= '3d')
 
@@ -97,11 +97,11 @@ def manualRotationTest():
         
 
 def main():
-    mesh = geo.Mesh("files/top.wrl")
-    mesh.readVectors()
+    channel = chan.Channel("files/bottom.wrl")
+    channel.readVectors()
     #mesh.updateIterationShown(1)
-    mesh.straighten(.001)
-    mesh.plotDiameter()
+    channel.straighten(.001)
+    channel.plotDiameter()
 
 main()
 

@@ -2,7 +2,7 @@
 
 ###     Rotation    ###
 ## Abs value
-THRESHOLD = .1      # The threshold for change in arclength
+THRESHOLD = .01      # The threshold for change in arclength
 ITERATIONNUM = 3    # The nth iteration to plot display
 
 ###     Analysis    ###
