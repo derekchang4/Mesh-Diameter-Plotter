@@ -46,6 +46,7 @@ class Channel(strtn.Straightenable):
 
         # Post straightened data
         self.slices         = None  # A vector list with points separated by slices
+        self.slicesCurrent  = False # Flag for if the slices are up to date
 
     def readVectors(self):
         if (".stl" in self.filename.lower()):
@@ -65,6 +66,39 @@ class Channel(strtn.Straightenable):
         #print(self.VECTORMAP)
         #print(self.vectorList)
         print(self.VECTORCOUNT, "Vertices")
+
+    # Straightens each slice in the channel until threshold
+    def straightenSlices(self):
+        print("\nStraightening slices")
+        sliceNum = 1
+        for s in self.slices:
+            iteration = 1
+            print(f"Slice {sliceNum}")
+            sliceNum += 1
+            print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
+            s.fitGeometry()
+            rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
+            print(f"Rotation: {s.curRotation} =  {rotationSum}")
+            while not s.atThreshold():
+                iteration += 1
+                print(f"\nIteration: {iteration}")
+                s.fitGeometry()
+                rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
+                print(f"Rotation: {s.curRotation} =  {rotationSum}")
+                print(f"Total rotation = {s.totalRotation}")
+            print(f"\nThreshold reached ({THRESHOLD})")
+            print(f"  Last rotation: {s.curRotation} = {rotationSum}")
+            print(f"  Total rotation: {s.totalRotation}")
+
+    # Gets the diameter dictionary
+    def getDiameter(self, chunkSize):
+        return va.condenseDiameterByChunk(self.axisIdx, chunkSize, self)
+    
+    # Creates the slices and computes their
+    def computeMiniSlices(self):
+        self.sortPoints()
+        self.getGreatestSpan()
+        self.slices = va.sliceMiniSlices(self.vectorList, self.axisIdx, self.greatestSpan[1])
 
 ### Plotting
     def dprint(self, string, debug):
@@ -122,7 +156,9 @@ class Channel(strtn.Straightenable):
         ax.set_ylim([0, None])
         plt.title("Diameter across the longest axis")
         plt.show()
+        self.showCenters(centers)
 
+    def showCenters(self, centers):
         # Showing centers in relation
         x = []
         y = []
@@ -138,9 +174,29 @@ class Channel(strtn.Straightenable):
         plt.title("Centers")
         plt.show()
 
-    def plotChunkDiameter(self):
-        ax = plt.axes(projection = '3d')
+    def plotChunkDiameter(self, specifiedWidth):
+        ax = plt.axes()
+        self.findCentroids()
+        avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, specifiedWidth, self)
+        vp.plotDiameter(ax, avgDiameter)
         
+        axis = None
+        match self.axisIdx:
+            case 0:
+                axis = "x"
+            case 1:
+                axis = "y"
+            case 2:
+                axis = "z"
+            case _:
+                print("Invalid axis")
+                quit()
+        plt.xlabel(f"{axis} axis")
+        plt.ylabel("Diameter")
+        ax.set_ylim([0, None])
+        plt.title("Diameter across the longest axis")
+        plt.show()
+        self.showCenters(centers)
 
     # Doesn't work currently
     def updateIterationShown(self, iteration):

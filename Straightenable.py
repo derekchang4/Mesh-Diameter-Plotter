@@ -26,13 +26,18 @@ class Straightenable:
         self.dirVector      = None  # represents the slope of the centerline
         self.totalRotation     = [0, 0, 0]  # tracks the rotation applied to the original mesh (in radians)
         self.curRotation       = [0, 0, 0]  # the amount the object was rotated by the current iteration
-        self.sorted         = False # tracks if the vectorList has been sorted
-        self.centroidsFound = False # tracks if the centroids have been computed
         self.change         = None  # the amount of change the mesh went through in the last iteration
 
+        # Flags
+        self.sorted         = False # tracks if the vectorList has been sorted
+        self.centroidsFound = False # tracks if the centroids have been computed
+        self.greatestSpanUpdated    = False # tracks if the greatest span has been kept updated
+
     def getGreatestSpan(self):
-        # Sets axisIdx as well
-        self.greatestSpan = va.greatestSpan(self)
+        if self.greatestSpanUpdated == False:
+            # Sets axisIdx as well
+            self.greatestSpan = va.greatestSpan(self)
+            self.greatestSpanUpdated = True
     
     def sortPoints(self):
         # Don't sort if already sorted
@@ -40,6 +45,7 @@ class Straightenable:
             return
         self.vectorList = va.sortPoints(self.axisIdx, self.vectorList)
         self.sorted = True
+        print("Sorted")
 
     def findCentroids(self):
         if self.centroidsFound == True:
@@ -55,18 +61,19 @@ class Straightenable:
         self.sorted = False # Rotation mixes points
         self.centroidsFound = False # centroids must be recomputed 
 
-    # Straightens the channel iteratively until threshold in Geometry.py
+    # Straightens the channel iteratively until threshold in Straightenable.py
     # Then calculates the diameters across the axis
-    def straighten(self, resolution = 1):
-        print(f"Resolution {resolution}")
-        ax1 = plt.axes(projection = '3d')
-        plt.title("Original")
-        vp.plotMesh(self.vectorList, ax1, resolution)
-        plt.show()
+    def straighten(self, resolution = .01, plot = True):
+        if plot:
+            print(f"Resolution {resolution}")
+            ax1 = plt.axes(projection = '3d')
+            plt.title("Original")
+            vp.plotMesh(self.vectorList, ax1, resolution)
+            plt.show()
         iteration = 1
         print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
         self.fitGeometry()
-        if iteration % self.ITERATIONNUM == 0:
+        if plot == True and iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
                 self.plot(resolution)
         rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
@@ -78,36 +85,17 @@ class Straightenable:
             rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
             print(f"Rotation: {self.curRotation} =  {rotationSum}")
             print(f"Total rotation = {self.totalRotation}")
-            if iteration % self.ITERATIONNUM == 0:
+            if plot == True and iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
                 self.plot(resolution)
         print(f"\nThreshold reached ({THRESHOLD})")
-        print(f"  Last rotation: {self.curRotation} = {rotationSum}")
-        print(f"  Total rotation: {self.totalRotation}")
-        plt.title("Straightened")
-        self.plot(resolution)
+        print(f"  Last rotation (radians): {self.curRotation} = {rotationSum}")
+        print(f"  Total rotation (radians): {self.totalRotation}")
+        if plot:
+            plt.title("Straightened")
+            self.plot(resolution)
 
-    # A straighten function that doesn't display
-    # Straightens the channel iteratively until threshold in Geometry.py
-    # Then calculates the diameters across the axis
-    def straightenSlices(self):
-        print("\nSlice straightening")
-        for s in self.slices:
-            iteration = 1
-            print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
-            s.fitGeometry()
-            rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
-            print(f"Rotation: {self.curRotation} =  {rotationSum}")
-            while not self.atThreshold():
-                iteration += 1
-                print(f"\nIteration: {iteration}")
-                self.fitGeometry()
-                rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
-                print(f"Rotation: {self.curRotation} =  {rotationSum}")
-                print(f"Total rotation = {self.totalRotation}")
-            print(f"\nThreshold reached ({THRESHOLD})")
-            print(f"  Last rotation: {self.curRotation} = {rotationSum}")
-            print(f"  Total rotation: {self.totalRotation}")
+    
     # Make a diameter function for different slices
 
     def atThreshold(self):
@@ -125,7 +113,35 @@ class Straightenable:
         else:
             return False
         
-    def rotate(self, theta, rotationAxis, radians = True):
+    def rotate(self, rotation, radians = True):
         if not radians:
-            theta = theta * np.pi / 180
-        va.rotate(self.vectorList, theta, rotationAxis, True)
+            for axis, theta in rotation:
+                rotation[axis] = theta * np.pi / 180
+        for axis, rads in enumerate(rotation):
+            va.rotate(self.vectorList, rads, axis, True)
+        self.sorted = False
+        self.centroidsFound = False
+
+    ## Files
+    # UNFINISHED
+    def save(self, filename):
+        file = open(filename, "w")
+        # Info
+        file.write(f"VECTORCOUNT,{self.VECTORCOUNT}")
+        file.write(f"axisIdx,{self.axisIdx}")
+        file.write(f"greatestSpan,{self.greatestSpan[0]},{self.greatestSpan[1]}")
+        file.write(f"change,{self.change}")
+        # Flags
+        file.write(f"sorted,{self.sorted}")
+        file.write(f"centroidsFound,{self.centroidsFound}")
+        file.write(f"greatestSpanUpdated,{self.greatestSpanUpdated}")
+        file.write(f"\n")
+
+        # Any point lists
+        file.write(f"OGVECTORLIST")
+        for v in self.OGVECTORLIST:
+            file.write(f"{v[0]},{v[1]},{v[2]}")
+        file.write(f"\n")
+        file.write("vectorList")
+        for v in self.vectorList:
+            file.write(f"{v[0]},{v[1]},{v[2]}")

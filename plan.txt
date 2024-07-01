@@ -7,6 +7,14 @@ Plan today!!!!
 3. Iteratively rotate
 4. Tweak visuals
 
+6/30/2024- Sunday
+Debrief for when I wake up:
+* test individual centerline diameter compute
+* Specifically datmean and dirVector getting for slices
+it seems like normal diameter chunking works
+but I don't fully trust it yet. Look through the 
+loops for bugs
+
 This research will aid in the visualization
 of small structures and aid in the 
 development of microchannel cooling.

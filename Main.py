@@ -96,12 +96,46 @@ def manualRotationTest():
         mesh.plot()
         
 
-def main():
+def basicHighVector():
     channel = chan.Channel("files/bottom.wrl")
     channel.readVectors()
     #mesh.updateIterationShown(1)
     channel.straighten(.001)
     channel.plotDiameter()
+
+def commandLine(channel):
+    #print("""Actions:
+    #      [1] Rotate
+    #      [2]
+    #      """)
+    print("\n###              Command line started            ###")
+    print("You have access to the channel object. You can use this to debug : ex. print(channel.vectorList)")
+    print("Enter 'q' to quit")
+    command = input("\nEnter your python command: ")
+    while command != 'q':
+        try:
+            exec(command)
+        except Exception as error:
+            print("An exception occured: ", type(error).__name__)
+        command = input("\n$ ")
+
+def main():
+    channel = chan.Channel("files/cylinder_test.stl")
+    channel.readVectors()
+    channel.rotate((0.007530334121267357, 0.008571440884751702, 0))
+    channel.straighten(.001, False)
+    #channel.findCentroids()
+    channel.computeMiniSlices()
+
+    num = 1
+    # for s in channel.slices:
+    #     print(f"Slice {num}")
+    #     print(f"  datamean= {s.datamean} dirV= {s.dirVector}")
+    #     print(f"  First v= {s.vectorList[0]} Last v= {s.vectorList[-1]} count= {s.VECTORCOUNT}")
+    #     print(f"  centroids: {s.centroids}")
+    #     num += 1
+    channel.plotChunkDiameter(0)
+    #commandLine(channel)
 
 main()
 

@@ -89,14 +89,14 @@ def plotDiameter(ax, avgDiameter):
     # print(f"axisVals = {axisVals}\ndiameter = {diameters}")
     plt.scatter(axisVals, diameters)
     
-    i = 0
-    for v in avgDiameter.items():
-        if (len(avgDiameter) > SKIPLEN):
-            if (i % NTHTERM == 0):
-                print(f"Skipped {NTHTERM} [{v[0]} : {v[1]}]")
-        else:
-            print(f"[{v[0]} : {v[1]}]")
-        i += 1
+    # i = 0
+    # for v in avgDiameter.items():
+    #     if (len(avgDiameter) > SKIPLEN):
+    #         if (i % NTHTERM == 0):
+    #             print(f"Skipped {NTHTERM} [{v[0]}, {v[1]}]")
+    #     else:
+    #         print(f"[{v[0]}, {v[1]}]")
+    #     i += 1
         
 def plotAxes(ax, length):
     ax.plot3D([0, length],  [0, 0], [0, 0], c = 'r')

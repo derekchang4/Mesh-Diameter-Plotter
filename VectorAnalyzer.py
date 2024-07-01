@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import Constants as const
 import Slice as slc
+import math as mth
 
 # Number of slices for computing centroids
 #SLICES = 5
@@ -107,6 +108,7 @@ def findCentroids(mesh, debug = False):
     sliceSize = span / SLICES
     max = vectorList[0][axisIdx]
     min = vectorList[-1][axisIdx]
+    print(f"Finding centroids- max= {vectorList[0]} min= {vectorList[-1]}")
 
     floor = max - sliceSize
     ceiling = max
@@ -171,17 +173,21 @@ def sortPoints(axis, vectorCollection):
     match axis:
         case "x":
             vectorList.sort(reverse = True, key = sortX)
+        case 0:
+            vectorList.sort(reverse = True, key = sortX)
         case "y":
             print(type(vectorList))
             vectorList.sort(reverse = True, key = sortY)
+        case 1:
+            vectorList.sort(reverse = True, key = sortY)
         case "z":
             vectorList.sort(reverse = True, key = sortZ)
+        case 2:
+            vectorList.sort(reverse = True, key = sortZ)
         case _:
-            if isinstance(axis, int) and axis > -1 and axis < 3:
-                pass
-            else:
-                print("Invalid axis; Quitting")
-                quit()
+            # 7/1/24 12am bug fix: You idiot why did you specifically put a pass for ints
+            print("Invalid axis; Quitting")
+            quit()
     #-for v in vectorList:
     #-    print(v)
     return vectorList
@@ -200,38 +206,45 @@ def slicePoints(axisIdx, vectorList):
         try:
             v = next(it)
         except StopIteration:
-            print("Finished slicing")
+            print("Finished value slicing")
             v = None
     return slices
 
-# This method finds the centroids of minislices, along with
-# their dirVector. 
-def sliceMiniSlices(vectorList, axisIdx, greatestSpan) -> list[slc.Slice]:
+# This method takes in a vector list and creates a list
+# of Slices, finding the centroids of minislices, along with
+# their dirVector
+def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
     # Expects a sorted list
+    print(f"\nComputing {MINISLICES} minislices per slice ({SLICES}) across axis[{axisIdx}]")
     if (MINISLICES < 2):
         print(f"Not enough centroids to find a line! MINISLICES = {MINISLICES} < 2")
         quit()
     # [Slice, Slice, ...]
     slices = []
-    
-    sliceSize = greatestSpan / SLICES
+    print(f"  Top Point: {vectorList[0]}\n  Bottom point: {vectorList[-1]}")
+    sliceSize = greatestSpanSize / SLICES
     # List must be sorted
     it = iter(vectorList)
     v = next(it)
     miniSliceSize = sliceSize / MINISLICES
     boundary = v[axisIdx] - sliceSize
-    miniBoundary = v[axisIdx] - sliceSize
+    
+    miniBoundary = v[axisIdx] - miniSliceSize
     
     # For each slice
     for i in range(SLICES):
+        print(f"Computing slice {i}")
         miniCentroids = []
         slice = slc.Slice()
+        slice.vectorList = []
         slice.axisIdx = axisIdx
-        # Slice them into smaller slices
+        # Compute each minislice until its boundary
         for j in range(MINISLICES):
+            print(f"  Computing minislice [{j}] of slice [{i}]")
             numVerts = 0
             centroid = [0, 0, 0]
             # For each point in a minislice
+            print(f"  Vector: {v[axisIdx]}  Miniboundary: {miniBoundary}  Boundary: {boundary}")
             while v[axisIdx] > miniBoundary:
                 slice.vectorList.append(v)
                 centroid[0] += v[0]
@@ -241,30 +254,36 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpan) -> list[slc.Slice]:
                 try:
                     v = next(it)
                 except:
-                    pass
+                    #print("  Out of vertices")
+                    break
             # Get average within the minislice
             centroid[0] = centroid[0] / numVerts
             centroid[1] = centroid[1] / numVerts
             centroid[2] = centroid[2] / numVerts
+            print(f"Centroid found for slice[{i}][{j}]")
             # Add this minicentroid into the current slice
             miniCentroids.append(centroid)
             # Shift minislice boundary down
-            if j < MINISLICES - 1:
+            if j != MINISLICES - 2:
                 miniBoundary -= miniSliceSize
             # If at the end of a slice
             else:
                 # Set to the boundary
                 miniBoundary = boundary
         # If at end of mesh, set boundary below
-        if i != SLICES - 1:
+        if i != SLICES - 2:
             boundary -= sliceSize
         else:
-            boundary -= sliceSize - 1
+            boundary -= (sliceSize + 1)
         # Add minicentroids to list
         slice.centroids = miniCentroids
-        slice.MINISLICES = MINISLICES
         #centroids.append(miniCentroids)
         slices.append(slice)
+
+    # Now compute the dirV and datamean for each
+    for s in slices:
+        s.findCenterline()
+        s.VECTORCOUNT = len(s.vectorList)
     return slices
     
 # Sets a point on the centerline at the
@@ -314,7 +333,6 @@ def findCenterline(mesh):
     mesh.datamean = datamean
     # Use this direction vector elsewhere + datamean
 
-### Track rotation later
 #Fit the line of the centroids to be parallel with the axis
 def fitGeometry(mesh, debug = False):
     # Takes the original vectorList and rotates by
@@ -382,7 +400,7 @@ def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0, debug = False)
 
     return foundPoint
     
-
+# Calculates average diameter along each value
 def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None):
     dirVector = np.array(dirVector)
     # Use the given dict if ones given
@@ -399,14 +417,24 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None
         # print(f"k = {k}  v = {v}")
         while k[0] == v[axisIdx]:
             # scalar = v[axis] - datamean / dirVector
+            # point = scalar * dirV + datamean
             ## Wrong! -> scalar = v[axisIdx] / (dirVector[axisIdx] + datamean[axisIdx]) 
-            scalar = (v[axisIdx] - datamean) / dirVector[axisIdx]    
+            if (dirVector[axisIdx] == 0):
+                print("EXCEPTION CAUGHT")
+                print(f"(scalar = {v[axisIdx] - datamean}) / {dirVector[axisIdx]}")
+                print(f"= {(v[axisIdx] - datamean) / dirVector[axisIdx]}")
+            try:
+                scalar = (v[axisIdx] - datamean) / dirVector[axisIdx]  
+            except:
+                print(f"(scalar = {v[axisIdx]} - {datamean}) / {dirVector[axisIdx]}")
+                quit()  
             # This is how much we need to multiply
             # the direction vector by to get to the same plane as v[axisIdx]
             center = dirVector * scalar + datamean
             i += 1
             if (len(sortedVL) < SKIPLEN):
                 print(v, "vs", center)
+                print(f"dirV= {dirVector} datamean= {datamean} scalar= {scalar}")
             elif i % (NTHTERM * 5) == 0:
                 centers.append(center)
                 #print("Shortened", v, "vs", center)
@@ -422,31 +450,59 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None
     # Returns dict of lengths along longest axis to avg diameters
     return avgDiameter, centers
         
-def calculateDiameterBySlice(slices, axisIdx, specifiedWidth):
+# Calculates diameter along each value, then averages it into
+# the specified chunk width. If dirvector has been calculated
+# per slice, goes along with slice dirvector
+#
+# THIS FUNCTION SERVES MULTIPLE PURPOSES
+# 1. Allows for getting the diameter as an average across values
+# 2. Supports the analyzation of diameter using straightened slices
+#    which it will do if the channel was sliced
+# 3. Supports the getting of diameter on a value-by-value basis
+# 4. Supports getting diameter along an unsliced channel
+#
+# In short, use this function for most diameter getting since it's
+# more powerful. calculateDiameter() is only able to be used in the
+# case of getting value-by-value avg diameters across an unsliced
+# computed mesh.
+def condenseDiameterByChunk(axisIdx, specifiedWidth, channel) -> tuple[dict, list]:
     # Calculate diameter across some specified width
     # Axis length to avg diameter at that length
     avgDiameter = {}
+    centers = []
 
-    # Start at the top
-    # Get all diameter values per point into avgDiameter
-    for slice in slices:
-        slice.calculateDiameter(avgDiameter, specifiedWidth)
+    if channel.slices != None:
+        # Start at the top
+        # Get all diameter values per point into avgDiameter
+        print("Channel slices were computed, using individual centerlines")
+        for slice in channel.slices:
+            d, c = slice.calculateDiameter(avgDiameter)
+            centers.extend(c)
 
-    # Then merge them across the specified width
-    topPoint = slices[0].vectorList[0]
-    bottomPoint = slices[-1].vectorList[-1]
+        # Then merge them across the specified width
+        topPoint = channel.slices[0].vectorList[0]
+        bottomPoint = channel.slices[-1].vectorList[-1]
+    else:
+        print("Channel slices not computed, computing across centerline")
+        avgDiameter, centers = calculateDiameter(axisIdx, channel.vectorList, channel.dirVector, channel.datamean, avgDiameter)
+        topPoint = channel.vectorList[0]
+        bottomPoint = channel.vectorList[-1]    # 6/30/24 Oops, left it as 0 before
     floor = topPoint[axisIdx] - specifiedWidth
 
-    sliceNum = len(slices)
+    # If the specified width is 0, just return what we have. No need to condense
+    if specifiedWidth == 0:
+        return avgDiameter, centers
+
+    numChunks = mth.ceil((topPoint[axisIdx] - bottomPoint[axisIdx]) / specifiedWidth)
     chunkAvgDiameter = {}
     lengthSum = 0
     diameterSum = 0
     numSlicesInChunk = 0
     # Go through each entry and combine them within the specifiedWidth
     # (assumes dictionary is sorted greatest to least)
-    for length, diameter in avgDiameter.items():
-        if length > floor:
-            lengthSum += length
+    for height, diameter in avgDiameter.items():
+        if height > floor:
+            lengthSum += height
             diameterSum += diameter
             numSlicesInChunk += 1
         else:
@@ -454,12 +510,12 @@ def calculateDiameterBySlice(slices, axisIdx, specifiedWidth):
             lengthSum = 0
             diameterSum = 0
             numSlicesInChunk = 0
-            sliceNum -= 1
-            if sliceNum == 0:
+            numChunks -= 1
+            if numChunks == 1:
                 floor = bottomPoint[axisIdx] - 1
             else:
                 floor -= specifiedWidth
-    return chunkAvgDiameter
+    return chunkAvgDiameter, centers
 
 print("Vector Analyzer imported")
 
