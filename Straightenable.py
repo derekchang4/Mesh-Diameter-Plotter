@@ -75,7 +75,7 @@ class Straightenable:
         self.fitGeometry()
         if plot == True and iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
-                self.plot(resolution)
+                self.show(resolution)
         rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
         print(f"Rotation: {self.curRotation} =  {rotationSum}")
         while not self.atThreshold():
@@ -87,13 +87,13 @@ class Straightenable:
             print(f"Total rotation = {self.totalRotation}")
             if plot == True and iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
-                self.plot(resolution)
+                self.show(resolution)
         print(f"\nThreshold reached ({THRESHOLD})")
         print(f"  Last rotation (radians): {self.curRotation} = {rotationSum}")
         print(f"  Total rotation (radians): {self.totalRotation}")
         if plot:
             plt.title("Straightened")
-            self.plot(resolution)
+            self.show(resolution)
 
     
     # Make a diameter function for different slices
@@ -145,3 +145,104 @@ class Straightenable:
         file.write("vectorList")
         for v in self.vectorList:
             file.write(f"{v[0]},{v[1]},{v[2]}")
+
+    ### Plotting
+    def dprint(self, string, debug):
+        if debug:
+            print(string)
+
+    def plotCentroids(self, ax):
+        self.findCentroids()
+        vp.plotCentroids(self.centroids, ax)
+
+    def plotMesh(self, ax, resolution = 1):
+        vp.plotMesh(self.vectorList, ax, resolution)
+
+    def plotCenterLine(self, ax, debug = False):
+        min = self.vectorList[-1][self.axisIdx]
+        max = self.vectorList[0][self.axisIdx]
+        self.dprint(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}", debug)
+        vp.plotCenterLine(self.centroids, ax, min, max, self.axisIdx)
+
+    # Shows centroids, centerline, mesh, and axes
+    def show(self, resolution = 1, debug = False):
+        ax1 = plt.axes(projection = '3d')
+        self.plotCentroids(ax1)
+        self.dprint(f"\nPlotting", debug)
+        self.dprint(f"datamean: {self.datamean}", debug)
+        self.plotCenterLine(ax1)
+        self.plotMesh(ax1, resolution)
+        self.plotTargetAxis(ax1, self.axisIdx)
+        plt.show()
+    
+    def plotTargetAxis(self, ax, axisIdx):
+        axes = [[0, 0], [0, 0], [0, 0]]
+        axes[axisIdx][1] = self.datamean[axisIdx]
+        vp.plotAxes(ax, self.datamean[axisIdx] / 4)
+        ax.plot3D(axes[0], axes[1], axes[2])
+
+    # Mostly deprecated, use chunkdiameter to show diameter plotted
+    # along slice centerlines
+    def plotDiameter(self):
+        ax = plt.axes()
+        self.findCentroids()
+        avgDiameter, centers = va.calculateDiameter(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
+        vp.plotDiameter(ax, avgDiameter)
+        
+        axis = None
+        match self.axisIdx:
+            case 0:
+                axis = "x"
+            case 1:
+                axis = "y"
+            case 2:
+                axis = "z"
+            case _:
+                print("Invalid axis")
+                quit()
+        plt.xlabel(f"{axis} axis")
+        plt.ylabel("Diameter")
+        ax.set_ylim([0, None])
+        plt.title("Diameter across the longest axis")
+        plt.show()
+        self.showCenters(centers)
+
+    def showCenters(self, centers):
+        # Showing centers in relation
+        x = []
+        y = []
+        z = []
+        for v in centers:
+            x.append(v[0])
+            y.append(v[1])
+            z.append(v[2])
+        ax1 = plt.axes(projection= '3d')
+        self.plotMesh(ax1, .001)
+        ax1.scatter(x, y, z)
+        print(f"Centers: {len(centers)}")
+        plt.title("Centers")
+        plt.show()
+
+    def plotChunkDiameter(self, specifiedWidth):
+        ax = plt.axes()
+        self.findCentroids()
+        avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, specifiedWidth, self)
+        vp.plotDiameter(ax, avgDiameter)
+        
+        axis = None
+        match self.axisIdx:
+            case 0:
+                axis = "x"
+            case 1:
+                axis = "y"
+            case 2:
+                axis = "z"
+            case _:
+                print("Invalid axis")
+                quit()
+        plt.xlabel(f"{axis} axis")
+        plt.ylabel("Diameter")
+        ax.set_ylim([0, None])
+        plt.title("Diameter across the longest axis")
+        plt.show()
+        self.showCenters(centers)

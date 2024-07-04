@@ -44,7 +44,7 @@ def rotatedCylinderTest():
     #mesh.plotMesh(ax1)
     plt.title("Original")
     #plt.show()
-    mesh.plot()
+    mesh.show()
 
     mesh.straighten()
     ax2 = plt.axes(projection= '3d')
@@ -63,7 +63,7 @@ def bigCylinderTest():
     mesh.readVectors()
     ax = plt.axes(projection= '3d')
     plt.title("Original")
-    mesh.plot()
+    mesh.show()
 
     chan.updateIterationShown(7) # Show every 7th iteration
     mesh.straighten()
@@ -75,7 +75,7 @@ def manualRotationTest():
     ax1 = plt.axes(projection= '3d')
 
     plt.title("Original")
-    mesh.plot()
+    mesh.show()
 
     print("Starting manual rotation...")
     print("Input changes in radians in the format -> radians rotationAxis")
@@ -93,7 +93,7 @@ def manualRotationTest():
             print("Invalid input! Try again")
             continue
         mesh.rotate(radians, axis)
-        mesh.plot()
+        mesh.show()
         
 
 def basicHighVector():
@@ -120,13 +120,14 @@ def commandLine(channel):
         command = input("\n$ ")
 
 def main():
-    channel = chan.Channel("files/cylinder_test.stl")
+    channel = chan.Channel("files/bottom.wrl")
     channel.readVectors()
     channel.rotate((0.007530334121267357, 0.008571440884751702, 0))
     channel.straighten(.001, False)
     #channel.findCentroids()
     channel.computeMiniSlices()
-
+    #channel.straightenSlices(.001, False)
+    channel.showSlices(.001)
     num = 1
     # for s in channel.slices:
     #     print(f"Slice {num}")
@@ -134,6 +135,7 @@ def main():
     #     print(f"  First v= {s.vectorList[0]} Last v= {s.vectorList[-1]} count= {s.VECTORCOUNT}")
     #     print(f"  centroids: {s.centroids}")
     #     num += 1
+    # Find amira documentation for thresholding
     channel.plotChunkDiameter(0)
     #commandLine(channel)
 

@@ -18,6 +18,8 @@ ITERATIONNUM = const.ITERATIONNUM
 
 ## This class represents a mesh geometry file and will include 
 # a set of vectors and anything else that might need to be stored.
+# Extends from Straightenable, so has all the methods and fields
+# Straightenable has
 class Channel(strtn.Straightenable):
     def __init__(self, filename):
         super().__init__()
@@ -68,27 +70,28 @@ class Channel(strtn.Straightenable):
         print(self.VECTORCOUNT, "Vertices")
 
     # Straightens each slice in the channel until threshold
-    def straightenSlices(self):
+    def straightenSlices(self, resolution = 0, plot = False):
         print("\nStraightening slices")
-        sliceNum = 1
+        sliceNum = 0
         for s in self.slices:
-            iteration = 1
+            # iteration = 1
             print(f"Slice {sliceNum}")
             sliceNum += 1
-            print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
-            s.fitGeometry()
-            rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
-            print(f"Rotation: {s.curRotation} =  {rotationSum}")
-            while not s.atThreshold():
-                iteration += 1
-                print(f"\nIteration: {iteration}")
-                s.fitGeometry()
-                rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
-                print(f"Rotation: {s.curRotation} =  {rotationSum}")
-                print(f"Total rotation = {s.totalRotation}")
-            print(f"\nThreshold reached ({THRESHOLD})")
-            print(f"  Last rotation: {s.curRotation} = {rotationSum}")
-            print(f"  Total rotation: {s.totalRotation}")
+            self.straighten(resolution, plot)
+            # print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
+            # s.fitGeometry()
+            # rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
+            # print(f"Rotation: {s.curRotation} =  {rotationSum}")
+            # while not s.atThreshold():
+            #     iteration += 1
+            #     print(f"\nIteration: {iteration}")
+            #     s.fitGeometry()
+            #     rotationSum = (s.curRotation[0] ** 2) + (s.curRotation[1] ** 2) + (s.curRotation[2] ** 2)
+            #     print(f"Rotation: {s.curRotation} =  {rotationSum}")
+            #     print(f"Total rotation = {s.totalRotation}")
+            # print(f"\nThreshold reached ({THRESHOLD})")
+            # print(f"  Last rotation: {s.curRotation} = {rotationSum}")
+            # print(f"  Total rotation: {s.totalRotation}")
 
     # Gets the diameter dictionary
     def getDiameter(self, chunkSize):
@@ -100,103 +103,21 @@ class Channel(strtn.Straightenable):
         self.getGreatestSpan()
         self.slices = va.sliceMiniSlices(self.vectorList, self.axisIdx, self.greatestSpan[1])
 
-### Plotting
-    def dprint(self, string, debug):
-        if debug:
-            print(string)
-
-    def plotCentroids(self, ax):
-        self.findCentroids()
-        vp.plotCentroids(self.centroids, ax)
-
-    def plotMesh(self, ax, resolution = 1):
-        vp.plotMesh(self.vectorList, ax, resolution)
-
-    def plotCenterLine(self, ax, min = -10, max= 10, debug = False):
-        min = self.vectorList[-1][self.axisIdx]
-        max = self.vectorList[0][self.axisIdx]
-        self.dprint(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}", debug)
-        vp.plotCenterLine(self.centroids, ax, min, max, self.axisIdx)
-
-    def plot(self, resolution = 1, debug = False):
-        ax1 = plt.axes(projection = '3d')
-        self.plotCentroids(ax1)
-        self.dprint(f"\nPlotting", debug)
-        self.dprint(f"datamean: {self.datamean}", debug)
-        self.plotCenterLine(ax1)
-        self.plotMesh(ax1, resolution)
-        self.plotTargetAxis(ax1, self.axisIdx)
-        plt.show()
-    
-    def plotTargetAxis(self, ax, axisIdx):
-        axes = [[0, 0], [0, 0], [0, 0]]
-        axes[axisIdx][1] = self.datamean[axisIdx]
-        vp.plotAxes(ax, self.datamean[axisIdx] / 4)
-        ax.plot3D(axes[0], axes[1], axes[2])
-
-    def plotDiameter(self):
-        ax = plt.axes()
-        self.findCentroids()
-        avgDiameter, centers = va.calculateDiameter(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
-        vp.plotDiameter(ax, avgDiameter)
+    def plotMeshBySlice(self, ax, resolution):
+        for s in self.slices:
+            s.plotMesh(ax, resolution)
+            s.plotCenterLine(ax)
         
-        axis = None
-        match self.axisIdx:
-            case 0:
-                axis = "x"
-            case 1:
-                axis = "y"
-            case 2:
-                axis = "z"
-            case _:
-                print("Invalid axis")
-                quit()
-        plt.xlabel(f"{axis} axis")
-        plt.ylabel("Diameter")
-        ax.set_ylim([0, None])
-        plt.title("Diameter across the longest axis")
+    def showSlices(self, resolution = .01):
+        if self.slices == None:
+            print("Slices not computed yet!")
+            return
+        ax = plt.axes(projection= '3d')
+        self.plotMeshBySlice(ax, resolution)
+        self.plotTargetAxis(ax, self.axisIdx)
         plt.show()
-        self.showCenters(centers)
-
-    def showCenters(self, centers):
-        # Showing centers in relation
-        x = []
-        y = []
-        z = []
-        for v in centers:
-            x.append(v[0])
-            y.append(v[1])
-            z.append(v[2])
-        ax1 = plt.axes(projection= '3d')
-        self.plotMesh(ax1, .001)
-        ax1.scatter(x, y, z)
-        print(f"Centers: {len(centers)}")
-        plt.title("Centers")
-        plt.show()
-
-    def plotChunkDiameter(self, specifiedWidth):
-        ax = plt.axes()
-        self.findCentroids()
-        avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, specifiedWidth, self)
-        vp.plotDiameter(ax, avgDiameter)
-        
-        axis = None
-        match self.axisIdx:
-            case 0:
-                axis = "x"
-            case 1:
-                axis = "y"
-            case 2:
-                axis = "z"
-            case _:
-                print("Invalid axis")
-                quit()
-        plt.xlabel(f"{axis} axis")
-        plt.ylabel("Diameter")
-        ax.set_ylim([0, None])
-        plt.title("Diameter across the longest axis")
-        plt.show()
-        self.showCenters(centers)
+        # Could override each method in straightenable to check
+        # for slicing
 
     # Doesn't work currently
     def updateIterationShown(self, iteration):
