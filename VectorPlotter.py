@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import Constants as const
-import VectorAnalyzer as va
 
 NTHTERM = const.NTHTERM
 SKIPLEN = 300
@@ -41,6 +40,10 @@ def plotMesh(vectorList, ax, resolution):
     else:
         i = 0
         n = 1 // resolution
+        if n > len(vectorList):
+            print(f"Attempted to plot every {n}th point but mesh contains {len(vectorList)} points")
+            n = 1
+            print(f"Resolution too low; plotting every {n}th point")
         print(f"Plotting every {n}th point")
         for v in vectorList:
             if (i % n == 0):
@@ -56,7 +59,7 @@ def plotMesh(vectorList, ax, resolution):
     ax.scatter(ptsX, ptsY, ptsZ)
 
 
-def plotCenterLine(centroids, ax, min, max, axisIdx, debug = False):
+def plotCenterLine(centroids, ax, min, max, debug = False):
     centroids = np.array(centroids)
     dprint(f"Plot centerline centroids: {centroids}", debug)
     if centroids is None or centroids.size == 0:
@@ -75,7 +78,7 @@ def plotCenterLine(centroids, ax, min, max, axisIdx, debug = False):
     #point2 = va.findPointAlongLine(vv[0], axisIdx, datamean, max)
     #print(f"POINTS: {point1} {point2}")
     #linepts = vv[0] * np.array([point1, point2]) + datamean
-    linepts = vv[0] * np.mgrid[min:max:2j][:, np.newaxis] + datamean
+    linepts = vv[0] * np.mgrid[min:max:2j][:, np.newaxis] + min
     dprint(f"VV[0]= {vv[0]}", debug)
     dprint(f"mgrid= {np.mgrid[min:max:2j][:, np.newaxis]}", debug)
     dprint(f"linepts= {linepts}", debug)
@@ -87,7 +90,7 @@ def plotDiameter(ax, avgDiameter):
     axisVals = list(avgDiameter.keys())
     diameters = list(avgDiameter.values())
     # print(f"axisVals = {axisVals}\ndiameter = {diameters}")
-    plt.scatter(axisVals, diameters)
+    plt.plot(axisVals, diameters)
     
     # i = 0
     # for v in avgDiameter.items():

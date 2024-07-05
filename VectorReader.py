@@ -11,8 +11,9 @@ NTHLINE = const.NTHLINE
 # vertexes contained in the mesh. Excludes duplicate vertexes
 # (x, y, z) : # times counted
 
-def readVectors(fileName):
-    file = open(fileName)   # default on "rt" (read, text)
+def readVectors(fileName, file = None):
+    if file == None:
+        file = open(fileName)   # default on "rt" (read, text)
     map = {}                # empty dictionary
     # Header
     line = file.readline()

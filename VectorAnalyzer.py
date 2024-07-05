@@ -236,7 +236,7 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
         print(f"Computing slice {i}")
         miniCentroids = []
         slice = slc.Slice()
-        slice.vectorList = []
+        slice.OGVECTORLIST = []
         slice.axisIdx = axisIdx
         # Compute each minislice until its boundary
         for j in range(MINISLICES):
@@ -246,7 +246,7 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
             # For each point in a minislice
             print(f"  Vector: {v[axisIdx]}  Miniboundary: {miniBoundary}  Boundary: {boundary}")
             while v[axisIdx] > miniBoundary:
-                slice.vectorList.append(v)
+                slice.OGVECTORLIST.append(v)
                 centroid[0] += v[0]
                 centroid[1] += v[1]
                 centroid[2] += v[2]
@@ -282,6 +282,7 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
 
     # Now compute the dirV and datamean for each
     for s in slices:
+        s.vectorList = s.OGVECTORLIST.copy()
         s.findCenterline()
         s.VECTORCOUNT = len(s.vectorList)
     return slices
@@ -341,6 +342,7 @@ def fitGeometry(mesh, debug = False):
     centroids = mesh.centroids
     dirVector = mesh.dirVector
     datamean = mesh.datamean
+
     vectorList = mesh.OGVECTORLIST.copy()
     #vectorList = mesh.vectorList
     # Centroids sorted by height due to slicing
@@ -426,6 +428,7 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None
             try:
                 scalar = (v[axisIdx] - datamean) / dirVector[axisIdx]  
             except:
+                print("ERROR CALCULATING DIAMETER")
                 print(f"(scalar = {v[axisIdx]} - {datamean}) / {dirVector[axisIdx]}")
                 quit()  
             # This is how much we need to multiply
@@ -433,11 +436,12 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None
             center = dirVector * scalar + datamean
             i += 1
             if (len(sortedVL) < SKIPLEN):
-                print(v, "vs", center)
-                print(f"dirV= {dirVector} datamean= {datamean} scalar= {scalar}")
+               #print(v, "point vs center", center)
+               #print(f"dirV= {dirVector} datamean= {datamean} scalar= {scalar}")
+               centers.append(center)
             elif i % (NTHTERM * 5) == 0:
-                centers.append(center)
-                #print("Shortened", v, "vs", center)
+               centers.append(center)
+               #print("Shortened", v, "vs", center)
             # Euclidean distance using numpy
             dist = np.linalg.norm(v - center)
             totalDiameter += dist * 2
@@ -448,6 +452,8 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None
                 break
         avgDiameter[k[0]] = totalDiameter / k[1]    # divide the diameter total by num of points
     # Returns dict of lengths along longest axis to avg diameters
+    # print("Centers")
+    # print(centers)
     return avgDiameter, centers
         
 # Calculates diameter along each value, then averages it into

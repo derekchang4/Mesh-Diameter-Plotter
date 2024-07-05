@@ -162,7 +162,7 @@ class Straightenable:
         min = self.vectorList[-1][self.axisIdx]
         max = self.vectorList[0][self.axisIdx]
         self.dprint(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}", debug)
-        vp.plotCenterLine(self.centroids, ax, min, max, self.axisIdx)
+        vp.plotCenterLine(self.centroids, ax, min, max)
 
     # Shows centroids, centerline, mesh, and axes
     def show(self, resolution = 1, debug = False):

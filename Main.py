@@ -119,7 +119,7 @@ def commandLine(channel):
             print("An exception occured: ", type(error).__name__)
         command = input("\n$ ")
 
-def main():
+def main1():
     channel = chan.Channel("files/bottom.wrl")
     channel.readVectors()
     channel.rotate((0.007530334121267357, 0.008571440884751702, 0))
@@ -138,6 +138,11 @@ def main():
     # Find amira documentation for thresholding
     channel.plotChunkDiameter(0)
     #commandLine(channel)
+
+def main():
+    channel = chan.Channel("files/rotatedMPCylinder.stl")
+    channel.readVectors()
+    channel.plotChunkDiameter(0)
 
 main()
 
