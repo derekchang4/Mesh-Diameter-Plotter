@@ -390,7 +390,7 @@ def fitGeometry(mesh, debug = False):
 
 
 # Finds a point along some line given the values of
-# one coordinate and a point
+# one coordinate and an anchor point
 def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0, debug = False):
     # (x, y, z) = dirVector * t + (datamean)
 
@@ -401,9 +401,138 @@ def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0, debug = False)
     dprint(f"Point found: {foundPoint}", debug)
 
     return foundPoint
+
+def findTAxis(dirVector, axisIdx, givenPoint, axisVal) -> float:
+    # (x, y, z) = dirVector * t + (datamean)
+    # t is the scalar at which that axis hits the given axisIdx's coord
+    t = (axisVal -givenPoint[axisIdx]) / dirVector[axisIdx]
+    return t
+
+def findPerpendicularOnLine(a, b, c):
+    # Trying to find point D on a line AC that
+    # makes a perpendicular line to B
+    # t from point of reference of A
+    # https://math.stackexchange.com/questions/4347497/find-a-point-on-a-line-that-creates-a-perpendicular-in-3d-space
+    a = np.array(a)
+    b = np.array(b)
+    c = np.array(c)
+    t = np.dot((b - a), (c - a)) / np.square(np.linalg.norm(c - a))
+    d = a + t(c - a)
+    return t, d
+
+#FIXME
+def findRSquared(dirVector, axisIdx, vectorList, datamean) -> float:
+    sst = np.array([0, 0, 0]) # Sum of squares total
+    sse = np.array([0, 0, 0]) # Sum of squares error/residual
+    pass
+    for v in vectorList:
+        # Find t according to axisIdx
+        sst += (v - datamean)**2
+        #sse += (v - )
+
+# TODO: WIP
+def calculateDiameterBetweenCentroids(axisIdx, vectorList, centroids : list, avgDiameter: dict = None) -> tuple[dict, list]:
+    ''' 
+    Calculates the diameter using lines generated between points
+    '''
+    dirVector = []
+    # Add a slice at the ends for final (1/4 size?)
+
+    # Calculate lines by subtracting centroids
+    avgDiameter = {}
+    for i in range(len(centroids) - 1):
+        dirVector[i] = centroids[i] - centroids[i + 1]
+
+    for line in dirVector:
+        # Vector list needs to be split
+        # datamean anchor
+        calculateDiameterAlongLine(axisIdx, vectorList, line, __, avgDiameter)
+
+
+# Finds the distance between a point and a line defined
+# by two points
+def findDistFromLine(x1, x2, x0):
+    # Finds dist btwn two points on a line (x1, x2)
+    # and a point x0
+    # https://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+    x1 = np.array(x1)
+    x2 = np.array(x2)
+    x0 = np.array(x0)
+    crossprod = np.cross(x0 - x1, x0 - x2)
+    length = np.linalg.norm(crossprod) / np.linalg.norm(x2 - x1)
+    return length
+
+# distance using projection of x0 onto x1x2
+# BUG
+def findDistFromLineProjection(x1, x2, x0):
+    x1 = np.array(x1)
+    x2 = np.array(x2)
+    x0 = np.array(x0)
+    d = (x1 - x2) / np.linalg.norm(x1 - x2)
+    print(f"norm = {np.linalg.norm(x1 - x2)}")
+    print(f"d = {d}")
+    v = x0 - x2
+    print(f"v = {v}")
+    t = np.dot(v, d)
+    print(f"t = {t}")
+    # the point on the line closest to x0
+    p = x2 + np.dot(t, d)
+    print(f"p = {p}")
+    length = np.linalg.norm(p - x1)
+    return length
+
+def calculateDiameterAlongLineHelper():
+    pass
+def someFunc():
+    # input: avgDiameter dict along t vals
+    # process: use line to add to 
+    # output: avgDiameter dict along t vals
+    pass
+
+def calculateDiameterAlongLine(axisIdx, vectorList, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]:
+    ''' Calculates the distance of a point from a line '''
     
-# Calculates average diameter along each value
-def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None):
+    dirVector = np.array(dirVector)
+    # Initialize a dictionary
+    if (not isinstance(avgDiameter, dict)):
+        avgDiameter = {}
+
+    # dict(t, [totallength, count])
+    
+    centers = []
+    # 10 and 20 are arbitrary
+    x1 = dirVector * 10 + datamean
+    x2 = dirVector * 20 + datamean
+    i = 0
+    # for each point in the mesh
+    for x0 in vectorList:
+        # To find the 
+        # |(x0 - x1) x (x0 - x2)| / 
+        # |x2 - x1|
+        # where x0 is the point youre trying to find
+        length = findDistFromLine(x1, x2, x0)
+        # EXAMINE: is this t calculation right? 7/17/24
+        # Yeah, it finds t based on an existing dirV and point 7/17/24
+        t = (x0[axisIdx] - datamean[axisIdx]) / dirVector[axisIdx]
+        entry = avgDiameter.get(t, [0, 0])
+        entry[0] += length
+        entry[1] += 1
+        avgDiameter[t] = entry
+
+        # Center tracking
+        i += 1
+        center = dirVector * t + datamean
+        if (len(vectorList) < SKIPLEN):
+            #print(v, "point vs center", center)
+            #print(f"dirV= {dirVector} datamean= {datamean} scalar= {scalar}")
+            centers.append(center)
+        elif i % (NTHTERM * 5) == 0:
+            centers.append(center)
+            #print("Shortened", v, "vs", center)
+    return avgDiameter, centers
+
+# Calculates average diameter along some centerline from each "x" value
+def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]:
     dirVector = np.array(dirVector)
     # Use the given dict if ones given
     if (not isinstance(avgDiameter, dict)):
@@ -474,7 +603,7 @@ def calculateDiameter(axisIdx, sortedVL, dirVector, datamean, avgDiameter = None
 def condenseDiameterByChunk(axisIdx, specifiedWidth, channel) -> tuple[dict, list]:
     # Calculate diameter across some specified width
     # Axis length to avg diameter at that length
-    avgDiameter = {}
+    avgDiameter = {}    # Length : diameter in that length
     centers = []
 
     if channel.slices != None:
@@ -490,7 +619,7 @@ def condenseDiameterByChunk(axisIdx, specifiedWidth, channel) -> tuple[dict, lis
         bottomPoint = channel.slices[-1].vectorList[-1]
     else:
         print("Channel slices not computed, computing across centerline")
-        avgDiameter, centers = calculateDiameter(axisIdx, channel.vectorList, channel.dirVector, channel.datamean, avgDiameter)
+        avgDiameter, centers = calculateDiameterByValue(axisIdx, channel.vectorList, channel.dirVector, channel.datamean, avgDiameter)
         topPoint = channel.vectorList[0]
         bottomPoint = channel.vectorList[-1]    # 6/30/24 Oops, left it as 0 before
     floor = topPoint[axisIdx] - specifiedWidth

@@ -11,15 +11,35 @@ class GUI_Handler:
         self.mesh:              ch.Channel = None
         self.window:            Tk = None
         self.plotFrame:         Frame = None
-        self.foundCentroids:    bool = False
-        self.straightened:      bool = False
         self.resolution:        float = 1       # TODO: abstract it
+        # Flags
+        self.foundCentroids:    bool = False    # NOTE: could get this from mesh
+        self.straightened:      bool = False
+        
+        # Plot
+        self.axes               = None          # Holds the plot data
+        self.fig                = None
+        self.plotCanvas         = None
+        self.toolbar            = None
+
+        # Constants
+        self.BUTTON_HEIGHT = 2
+        self.BUTTON_WIDTH = 10
 
     def plot(self):
-        fig: Figure = Figure(figsize= (4, 3), dpi= 100)
+        # if self.fig == None:
+        self.fig = fig = Figure(figsize= (4, 3), dpi= 100)
+        # else:
+        #     fig = self.fig
 
-        plot1 = fig.add_subplot(projection= '3d')
+        if self.axes == None:
+            self.axes = plot1 = fig.add_subplot(projection= '3d')
+        else:
+            plot1 = self.axes
+            plot1.clear()
+
         if self.mesh == None:
+            fig.suptitle("Default Plot")
             plot1.plot([0, 1], [0, 2], [0, 2])
             print("No mesh loaded, default plot")
         else:
@@ -27,11 +47,19 @@ class GUI_Handler:
 
         # create Tkinter canvas containing
         # matplotlib figure
-        canvas = FigureCanvasTkAgg(fig, master = self.plotFrame)
+        if self.plotCanvas == None:
+            self.plotCanvas = canvas = FigureCanvasTkAgg(fig, master = self.plotFrame)
+        else:
+            canvas = self.plotCanvas
 
+        if self.foundCentroids:
+            self.mesh.plotCentroids(self.axes)
         canvas.draw()
 
-        toolbar = NavigationToolbar2Tk(canvas, self.plotFrame)
+        if self.toolbar == None:
+            self.toolbar = toolbar = NavigationToolbar2Tk(canvas, self.plotFrame)
+        else:
+            toolbar = self.toolbar
         toolbar.update()
         canvas.get_tk_widget().pack(fill= BOTH, expand= True)
         
@@ -54,6 +82,7 @@ class GUI_Handler:
         # Finds the centroids for the object
         self.mesh.findCentroids()
         self.foundCentroids = True
+        self.mesh.plotCentroids(self.axes)
     
     def checkMesh(self) :
         if self.mesh == None:
@@ -80,6 +109,11 @@ class GUI_Handler:
         # TODO: Add functionality to intake width
         self.mesh.plotChunkDiameter(specifiedWidth = 0)
 
+    def reset(self):
+        self.window.destroy()
+        self.__init__()
+        self.createGUI()
+
     def createGUI(self):
         self.window = Tk()
         # Add menubar
@@ -103,15 +137,24 @@ class GUI_Handler:
         # Build framing
         topFrame = Frame(self.window, bg= "red", height= 100, width= 300)
         topFrame.pack(side= "top", fill= BOTH, expand= True)
-        self.plotFrame = plotFrame = Frame(topFrame, highlightcolor= "blue", height= 100, width= 100)
+        self.plotFrame = plotFrame = Frame(topFrame, highlightcolor= "blue", height= 100, width= 300)
         plotFrame.pack(side= "left", anchor= "nw", fill= BOTH, expand= True)
         topRightFrame = Frame(topFrame, bg= "green", height = 100, width = 100)
-        topRightFrame.pack(side= "right")
-
+        topRightFrame.pack(side= "right", fill= BOTH, expand= True)
+        # Buttons and options
         buttonFrame = Frame(topRightFrame, bg = "yellow", height = 100, width= 100)
-        buttonFrame.pack(side = "right")
+        buttonFrame.pack(side = "right", expand= True, anchor= W)
         optionsFrame = Frame(topRightFrame, bg = "orange", height = 100, width = 100)
-        optionsFrame.pack(side = "left")
+        optionsFrame.pack(side = "left", fill= BOTH, expand = True)
+        # Frame each button
+        p2b = 20
+        plot_Frame = Frame(optionsFrame, bg= "brown", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
+        straighten_Frame = Frame(optionsFrame, bg= "blue", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
+        find_centroid_Frame = Frame(optionsFrame, bg= "brown", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
+        rotate_Frame = Frame(optionsFrame, bg= "blue", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
+        plot_diameter_Frame = Frame(optionsFrame, bg= "brown", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
+        read_file_Frame = Frame(optionsFrame, bg= "blue", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
+        reset_Frame = Frame(optionsFrame, bg= "brown", height = self.BUTTON_HEIGHT, width = self.BUTTON_WIDTH)
 
         # Bottom frame
         bottomFrame = Frame(self.window, bg= "brown", height = 150, width = 300)
@@ -120,40 +163,52 @@ class GUI_Handler:
         # Create button
         plot_button = Button(master = buttonFrame,
                             command = self.plot,
-                            height = 2,
-                            width = 10,
+                            height = self.BUTTON_HEIGHT,
+                            width = self.BUTTON_WIDTH,
                             text = "Plot")
         straighten_button = Button(master = buttonFrame,
                                 command = self.straighten,
-                                height = 2,
-                                width = 10,
+                                height = self.BUTTON_HEIGHT,
+                                width = self.BUTTON_WIDTH,
                                 text = "Straighten")
         find_centroid_button = Button(master = buttonFrame,
                                     command = self.findCentroids,
-                                    height = 2,
-                                    width = 10,
+                                    height = self.BUTTON_HEIGHT,
+                                    width = self.BUTTON_WIDTH,
                                     text = "Find Centroids")
         rotate_button = Button(master = buttonFrame,
                             command = self.rotate,
-                            height = 2,
-                            width = 10,
+                            height = self.BUTTON_HEIGHT,
+                            width = self.BUTTON_WIDTH,
                             text = "Rotate")
         plot_diameter_button = Button(master = buttonFrame,
                                     command = self.plotDiameter,
-                                    height = 2,
-                                    width = 10,
+                                    height = self.BUTTON_HEIGHT,
+                                    width = self.BUTTON_WIDTH,
                                     text = "Plot Diameter")
         read_file_button = Button(master = buttonFrame,
                                 command = self.getFile,
-                                height = 2,
-                                width = 10,
+                                height = self.BUTTON_HEIGHT,
+                                width = self.BUTTON_WIDTH,
                                 text = "Read File")
+        reset_button = Button(master = buttonFrame,
+                              command = self.reset,
+                              height = self.BUTTON_HEIGHT,
+                              width = self.BUTTON_WIDTH,
+                              text = "Reset")
+        
+        # Text input options
+        rotate_text = Text(rotate_Frame,
+                           height = self.BUTTON_HEIGHT / 2,
+                           width = self.BUTTON_WIDTH)
+        #rotate_text_instructions = Label
 
         # read file
         # calculate centroids, datamean, etc
         # fitGeometry
         # straighten
 
+        # Packing
         # Place button onto window
         read_file_button.pack()
         plot_button.pack()
@@ -161,6 +216,10 @@ class GUI_Handler:
         straighten_button.pack()
         rotate_button.pack()
         plot_diameter_button.pack()
+        reset_button.pack()
+        # Options
+        rotate_Frame.pack()
+        # rotate_text.pack()
         # Start mainloop
         self.window.mainloop()
 

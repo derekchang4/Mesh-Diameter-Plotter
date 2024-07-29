@@ -11,7 +11,7 @@ NTHLINE = const.NTHLINE
 # vertexes contained in the mesh. Excludes duplicate vertexes
 # (x, y, z) : # times counted
 
-def readVectors(fileName, file = None):
+def readVectorsSTL(fileName, file = None):
     if file == None:
         file = open(fileName)   # default on "rt" (read, text)
     map = {}                # empty dictionary
@@ -48,20 +48,37 @@ def readVectorsWRL(fileName):
 
     line = file.readline()
     i = 0
-    while line != "##SWITCHED_OBJECTS_POINT_ARRAY\n" and i < 200:
-        line = file.readline()
-        #print(line, end='')
+    while  i < 200:
+        # Checking for correct line
+        if (line == "point"):
+            line = file.readline().strip()
+            # Check if next line is bracket
+            if (line == "["):
+                break
+            continue
+        if (line == "point	["):
+            break
+        line = file.readline().strip()
+        # print(line)
         i += 1
     if (i == 200):
+        print("Points not found")
         quit()
+    
     print("\nPoints")
     i = 0
     line = file.readline().strip().rstrip(',')
     while line != ']':
-        point = readVertexWRL(line)
-        map[point] = map.get(point, 0) + 1
+        # handling any comments
+        if "#" in line:
+            line = file.readline().strip().rstrip(',')
+            continue
+
+        points = readLineWRL(line)
+        for point in points:
+            map[point] = map.get(point, 0) + 1
+            i += 1
         line = file.readline().strip().rstrip(',')
-        i += 1
         #if (i % NTHLINE == 0):
         #    print(f"Point: {point}")
     file.close()
@@ -92,9 +109,21 @@ def readVertex(file):
     z = sciToFloat(point[2])
     return (x, y, z)
 
+# Takes in a line of comma separated points
+# and returns a list of points
+def readLineWRL(line):
+    pointStrings = line.split(", ")
+    points = []
+    for pointStr in pointStrings:
+        try:
+            points.append(readVertexWRL(pointStr))
+        except:
+            print(f"Couldn't read: {pointStr}")
+    return points
+
 # Returns a 3-tuple of coords
-def readVertexWRL(line):
-    point = line.split()
+def readVertexWRL(pointString):
+    point = pointString.split()
     x = float(point[0])
     y = float(point[1])
     z = float(point[2])

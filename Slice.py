@@ -21,7 +21,7 @@ class Slice(strtn.Straightenable):
 
     # Takes in a dictionary and adds to the slice-diameter index
     def calculateDiameter(self, avgDiameter):
-        avgDiameter, centers = va.calculateDiameter(self.axisIdx, self.vectorList, self.dirVector, self.datamean, avgDiameter)
+        avgDiameter, centers = va.calculateDiameterByValue(self.axisIdx, self.vectorList, self.dirVector, self.datamean, avgDiameter)
         return avgDiameter, centers
     
     ## Overriding save

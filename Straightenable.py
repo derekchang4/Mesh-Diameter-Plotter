@@ -28,10 +28,19 @@ class Straightenable:
         self.curRotation       = [0, 0, 0]  # the amount the object was rotated by the current iteration
         self.change         = None  # the amount of change the mesh went through in the last iteration
 
+        # Data
+        self.diameter : dict = None
+        self.condensedDiameter : dict = None    # stores the condensed version of diameter
+        self.centers : list  = None
+
         # Flags
-        self.sorted         = False # tracks if the vectorList has been sorted
-        self.centroidsFound = False # tracks if the centroids have been computed
+        self.isSorted         = False # tracks if the vectorList has been sorted
+        self.centroidsUpdated = False # tracks if the centroids have been computed
         self.greatestSpanUpdated    = False # tracks if the greatest span has been kept updated
+        self.diameterUpdated     = False # tracks if avgDiameter is up to date
+
+        # Methods
+        self.diameterMethod = va.calculateDiameterByValue
 
     def getGreatestSpan(self):
         if self.greatestSpanUpdated == False:
@@ -41,30 +50,31 @@ class Straightenable:
     
     def sortPoints(self):
         # Don't sort if already sorted
-        if (self.sorted):
+        if (self.isSorted):
             return
         self.vectorList = va.sortPoints(self.axisIdx, self.vectorList)
-        self.sorted = True
+        self.isSorted = True
         print("Sorted")
 
     def findCentroids(self):
-        if self.centroidsFound == True:
+        if self.centroidsUpdated == True:
             return
         self.centroids, self.vectorList = va.findCentroids(self)
         va.findCenterline(self)
-        self.sorted = True  # Finding the centroids sorts the points
-        self.centroidsFound = True
+        self.isSorted = True  # Finding the centroids sorts the points
+        self.centroidsUpdated = True
 
     def fitGeometry(self):
         self.findCentroids()
         va.fitGeometry(self)
-        self.sorted = False # Rotation mixes points
-        self.centroidsFound = False # centroids must be recomputed 
+        # Rotation mixes points
+        # centroids must be recomputed 
+        self.resetState()
 
     # Straightens the channel iteratively until threshold in Straightenable.py
     # Then calculates the diameters across the axis
-    def straighten(self, resolution = .01, plot = True):
-        if plot:
+    def straighten(self, resolution = .01, show = True):
+        if show:
             print(f"Resolution {resolution}")
             ax1 = plt.axes(projection = '3d')
             plt.title("Original")
@@ -73,7 +83,7 @@ class Straightenable:
         iteration = 1
         print(f"\nIteration: {iteration}    threshold: {THRESHOLD}")
         self.fitGeometry()
-        if plot == True and iteration % self.ITERATIONNUM == 0:
+        if show == True and iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
                 self.show(resolution)
         rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
@@ -85,13 +95,13 @@ class Straightenable:
             rotationSum = (self.curRotation[0] ** 2) + (self.curRotation[1] ** 2) + (self.curRotation[2] ** 2)
             print(f"Rotation: {self.curRotation} =  {rotationSum}")
             print(f"Total rotation = {self.totalRotation}")
-            if plot == True and iteration % self.ITERATIONNUM == 0:
+            if show == True and iteration % self.ITERATIONNUM == 0:
                 plt.title(f"Iteration {iteration}")
                 self.show(resolution)
         print(f"\nThreshold reached ({THRESHOLD})")
         print(f"  Last rotation (radians): {self.curRotation} = {rotationSum}")
         print(f"  Total rotation (radians): {self.totalRotation}")
-        if plot:
+        if show:
             plt.title("Straightened")
             self.show(resolution)
 
@@ -119,8 +129,55 @@ class Straightenable:
                 rotation[axis] = theta * np.pi / 180
         for axis, rads in enumerate(rotation):
             va.rotate(self.vectorList, rads, axis, True)
-        self.sorted = False
-        self.centroidsFound = False
+        self.resetState()   # set flags to false
+
+    def computeDiameter(self, width = 0):
+        if self.diameterUpdated:
+            return
+        self.diameter, self.centers = self.diameterMethod(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
+        self.diameterUpdated = True
+        #calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]
+        #calculateDiameterAlongLine(axisIdx, vectorList, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]:
+        #calculateDiameterBetweenCentroids(axisIdx, vectorList, points, avgDiameter: dict = None) -> tuple[dict, list]:
+
+    ### Setters and Getters ###
+    def getDiameter(self):
+        if self.diameterUpdated:
+            return self.diameter
+        self.computeDiameter()
+        return self.diameter
+    def getCenters(self):
+        if self.diameterUpdated:
+            return self.centers
+        self.computeDiameter()
+        self.centers
+
+    def getSortedVL(self):
+        if self.isSorted:
+            return self.vectorList
+        self.sortPoints()
+        return self.vectorList
+    # For data purposes, gets the single avg diameter across
+    # entire channel
+    def getEntireDiameter(self, width):
+        self.findCentroids()
+        avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, width, self)
+        avgDiameterNum = 0
+        for d in avgDiameter.values():
+            avgDiameterNum += d
+        avgDiameterNum /= len(avgDiameter)
+        print(f"Average diameter across object: {avgDiameterNum}")
+        return avgDiameterNum
+
+    # Sets all flags to false so everything will be recomputed
+    def resetState(self) -> None:
+        self.isSorted = False
+        self.centroidsUpdated = False
+        self.greatestSpanUpdated = False
+        self.diameterUpdated = False
+
+    def setDiameterMethod(self, method):
+        self.diameterMethod = method
 
     ## Files
     # UNFINISHED
@@ -132,8 +189,8 @@ class Straightenable:
         file.write(f"greatestSpan,{self.greatestSpan[0]},{self.greatestSpan[1]}")
         file.write(f"change,{self.change}")
         # Flags
-        file.write(f"sorted,{self.sorted}")
-        file.write(f"centroidsFound,{self.centroidsFound}")
+        file.write(f"sorted,{self.isSorted}")
+        file.write(f"centroidsFound,{self.centroidsUpdated}")
         file.write(f"greatestSpanUpdated,{self.greatestSpanUpdated}")
         file.write(f"\n")
 
@@ -183,11 +240,10 @@ class Straightenable:
 
     # Mostly deprecated, use chunkdiameter to show diameter plotted
     # along slice centerlines
-    def plotDiameter(self):
-        ax = plt.axes()
+    def plotDiameter(self, ax):
         self.findCentroids()
-        avgDiameter, centers = va.calculateDiameter(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
-        vp.plotDiameter(ax, avgDiameter)
+        self.computeDiameter()
+        vp.plotDiameter(ax, self.getDiameter())
         
         axis = None
         match self.axisIdx:
@@ -204,8 +260,20 @@ class Straightenable:
         plt.ylabel("Diameter")
         ax.set_ylim([0, None])
         plt.title("Diameter across the longest axis")
+
+    def showDiameter(self, ax: plt.Axes = plt.axes()):
+        self.plotDiameter()
         plt.show()
-        self.showCenters(centers)
+    
+    # Shows plot for diameter and centers
+    def plotDiameterInfo(self):
+        self.plotDiameter()
+        self.showCenters(self.getCenters())
+
+    def saveDiameterPlot(self, filepath : str):
+        ax = plt.axes()
+        self.plotDiameter(ax)
+        plt.savefig(filepath)
 
     def showCenters(self, centers):
         # Showing centers in relation
@@ -217,16 +285,22 @@ class Straightenable:
             y.append(v[1])
             z.append(v[2])
         ax1 = plt.axes(projection= '3d')
-        self.plotMesh(ax1, .001)
+        self.plotMesh(ax1, .01)
         ax1.scatter(x, y, z)
         print(f"Centers: {len(centers)}")
         plt.title("Centers")
         plt.show()
 
+    # TODO: Make chunkdiameter called by getDiameter
     def plotChunkDiameter(self, specifiedWidth):
         ax = plt.axes()
         self.findCentroids()
         avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, specifiedWidth, self)
+        avgDiameterNum = 0
+        for d in avgDiameter.values():
+            avgDiameterNum += d
+        avgDiameterNum /= len(avgDiameter)
+        print(f"Average diameter across object: {avgDiameterNum}")
         vp.plotDiameter(ax, avgDiameter)
         
         axis = None

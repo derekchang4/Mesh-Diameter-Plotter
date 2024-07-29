@@ -53,7 +53,7 @@ class Channel(strtn.Straightenable):
     def readVectors(self):
         if (".stl" in self.filename.lower()):
             print("[STL FILE]")
-            self.VECTORMAP = vr.readVectors(self.filename)
+            self.VECTORMAP = vr.readVectorsSTL(self.filename)
         elif (".wrl" in self.filename.lower()):
             print("[WRL FILE]")
             self.VECTORMAP = vr.readVectorsWRL(self.filename)

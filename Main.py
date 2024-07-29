@@ -135,13 +135,15 @@ def main1():
     #     print(f"  First v= {s.vectorList[0]} Last v= {s.vectorList[-1]} count= {s.VECTORCOUNT}")
     #     print(f"  centroids: {s.centroids}")
     #     num += 1
-    # Find amira documentation for thresholding
+    # Find amira documentation for thresholding: None found!
     channel.plotChunkDiameter(0)
     #commandLine(channel)
 
 def main():
-    channel = chan.Channel("files/rotatedMPCylinder.stl")
+    channel = chan.Channel(r"C:\Users\dchan\Downloads\Illinois\CT\Longsample_etched\Data\Cleaned no hole\longsample_etched_60_cleanednh.wrl")
     channel.readVectors()
+    channel.straighten(show=False)
+    # vlist = channel.getSortedVL()
     channel.plotChunkDiameter(0)
 
 main()

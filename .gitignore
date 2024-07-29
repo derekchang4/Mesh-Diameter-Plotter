@@ -2,3 +2,6 @@ __pycache__/
 .vscode/
 settings.json
 *.wrl
+test.py
+script.py
+junk/
