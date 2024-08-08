@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import Constants as const
 
+# Constants to limit printing output
 NTHTERM = const.NTHTERM
-SKIPLEN = 300
+SKIPLEN = 300   # An output greater than this number will print every nth term
 
 def dprint(string, debug = False):
     if (debug):
@@ -89,7 +90,6 @@ def plotCenterLine(centroids, ax, min, max, debug = False):
 def plotDiameter(ax, avgDiameter):
     axisVals = list(avgDiameter.keys())
     diameters = list(avgDiameter.values())
-    # print(f"axisVals = {axisVals}\ndiameter = {diameters}")
     plt.plot(axisVals, diameters)
     
     # i = 0
@@ -103,7 +103,7 @@ def plotDiameter(ax, avgDiameter):
         
 def plotAxes(ax, length):
     ax.plot3D([0, length],  [0, 0], [0, 0], c = 'r')
-    ax.plot3D([0, 0], [0, length], [0, 0], c = 'gold')
+    ax.plot3D([0, 0], [0, length], [0, 0], c = 'g')
     ax.plot3D([0, 0], [0, 0], [0, length], c = 'b')
 
 # Takes in an axes object and clears it

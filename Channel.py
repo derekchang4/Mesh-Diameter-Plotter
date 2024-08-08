@@ -92,10 +92,6 @@ class Channel(strtn.Straightenable):
             # print(f"\nThreshold reached ({THRESHOLD})")
             # print(f"  Last rotation: {s.curRotation} = {rotationSum}")
             # print(f"  Total rotation: {s.totalRotation}")
-
-    # Gets the diameter dictionary
-    def getDiameter(self, chunkSize):
-        return va.condenseDiameterByChunk(self.axisIdx, chunkSize, self)
     
     # Creates the slices and computes their
     def computeMiniSlices(self):
@@ -122,3 +118,9 @@ class Channel(strtn.Straightenable):
     # Doesn't work currently
     def updateIterationShown(self, iteration):
         self.ITERATIONNUM = iteration
+
+    def diameterByCentroids(self):
+        connectingLines = []
+        for i in range(len((self.centroids)) - 1):
+            connectingLines.append(self.centroids[i] - self.centroids[i + 1])
+        

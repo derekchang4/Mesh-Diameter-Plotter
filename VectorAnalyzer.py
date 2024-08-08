@@ -14,6 +14,7 @@ import numpy as np
 import Constants as const
 import Slice as slc
 import math as mth
+import Straightenable as strn
 
 # Number of slices for computing centroids
 #SLICES = 5
@@ -35,7 +36,8 @@ def dprint(string, debug = False):
 
 # Finds the axis with the greatest span
 # and returns the letter of that axis
-def greatestSpan(mesh):
+def greatestSpan(mesh: strn.Straightenable):
+    
     sampleVector = mesh.vectorList[0]                    #Get some vector
     xMin = sampleVector[0]
     xMax = sampleVector[0]
@@ -63,21 +65,26 @@ def greatestSpan(mesh):
     ySpan = yMax - yMin
     zSpan = zMax - zMin
 
+    span = (xSpan, ySpan, zSpan)
+
+    # If we manually target the axis, we don't need to
+    # automatically find which axis is greatest
+    if mesh.isAutoTargetAxis == False:
+        mesh.greatestSpan = (mesh.axisIdx, span[mesh.axisIdx])
+        return (mesh.axisIdx, span[mesh.axisIdx])
+    
     if xSpan >= ySpan and xSpan >= zSpan:
         maxSpan = xSpan
-        mesh.greatestSpan = ("x", maxSpan)
-        mesh.axisIdx = 0
-        return ("x", maxSpan)
+        mesh.greatestSpan = (0, maxSpan)
+        return (0, maxSpan)
     if ySpan > xSpan and ySpan > zSpan:
         maxSpan = ySpan
-        mesh.greatestSpan = ("y", maxSpan)
-        mesh.axisIdx = 1
-        return ("y", maxSpan)
+        mesh.greatestSpan = (1, maxSpan)
+        return (1, maxSpan)
     if zSpan > xSpan and zSpan > ySpan:
         maxSpan = zSpan
-        mesh.greatestSpan = ("z", maxSpan)
-        mesh.axisIdx = 2
-        return ("z", maxSpan)
+        mesh.greatestSpan = (2, maxSpan)
+        return (2, maxSpan)
     else:
         print("Error finding span")
         quit()
@@ -86,15 +93,16 @@ def greatestSpan(mesh):
 def findCentroids(mesh, debug = False):
     #Sort vectors by x, y, or z parameter
     centroids = []
-    axis, span = greatestSpan(mesh) 
+    _, span = greatestSpan(mesh) 
+    axis = mesh.axisIdx
 
     # Get index of the axis
     match axis:
-        case "x":
+        case 0:
             axisIdx = 0
-        case "y":
+        case 1:
             axisIdx = 1
-        case "z":
+        case 2:
             axisIdx = 2
         case _:
             print("Invalid axis; Quitting")
@@ -186,7 +194,7 @@ def sortPoints(axis, vectorCollection):
             vectorList.sort(reverse = True, key = sortZ)
         case _:
             # 7/1/24 12am bug fix: You idiot why did you specifically put a pass for ints
-            print("Invalid axis; Quitting")
+            print(f"Invalid axis; Quitting (sorting) ({axis})")
             quit()
     #-for v in vectorList:
     #-    print(v)
@@ -287,12 +295,12 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
         s.VECTORCOUNT = len(s.vectorList)
     return slices
     
-# Sets a point on the centerline at the
-# same level as the lowest point on the mesh
-# to the origin
-def setToOrigin(sortedVL, dirVector, axisIdx):
-    
-    pass
+# Sets the mesh's centerpoint to the origin
+## Unused
+def setToOrigin(vectorList, datamean):
+    for i in range(len(vectorList)):
+        vectorList[i] = vectorList[i] - datamean
+    return vectorList
 
 # Rotates the mesh by given number of degrees
 # about the given axis
@@ -321,16 +329,20 @@ def rotate(vectorList, theta, axisIdx, radians= False):
         vectorList[i] = Rotation[axisIdx] @ vectorList[i]
 
 #Find a fit for the centroids
-def findCenterline(mesh):
-    centroids = np.array(mesh.centroids)
+def findCenterline(mesh: strn.Straightenable):
+    centroids = np.array(mesh.getCentroids())
     # Finding line of best fit
+    print(f"Centroids = {centroids}")
     datamean = centroids.mean(axis= 0)
     #print(datamean)
 
     # Use SVD to find the direction of the 
     # vector of best fit
     uu, dd, vv = np.linalg.svd(centroids - datamean)
-    mesh.dirVector = vv[0]
+    if not mesh.useAxisDiameterCenterline:
+        print("Centerline autocomputed")
+        mesh.dirVector = vv[0]
+        
     mesh.datamean = datamean
     # Use this direction vector elsewhere + datamean
 
@@ -352,7 +364,7 @@ def fitGeometry(mesh, debug = False):
     # True means it's been used; ie not to be used
     axes = [False, False, False]
     axes[axisIdx] = True
-    origin = findPointAlongLine(dirVector, axisIdx, datamean)
+    origin, _ = findPointAlongLineWithAxis(dirVector, axisIdx, datamean)
     dprint(f"Point: {pt}", debug)
     dprint("Line origin: {origin}", debug)
     
@@ -389,24 +401,16 @@ def fitGeometry(mesh, debug = False):
     mesh.vectorList = vectorList
 
 
-# Finds a point along some line given the values of
-# one coordinate and an anchor point
-def findPointAlongLine(dirVector, axisIdx, datamean, axisVal = 0, debug = False):
+# Finds the point on a line where the given axis
+# hits the desired value (axisVal)
+def findPointAlongLineWithAxis(dirVector, axisIdx, datamean, axisVal = 0, debug = False):
     # (x, y, z) = dirVector * t + (datamean)
-
     # t is the scalar at which that axis hits 0
-    t = (axisVal -datamean[axisIdx]) / dirVector[axisIdx]
+    t = (axisVal - datamean[axisIdx]) / dirVector[axisIdx]
     dprint(f"t at coord[{axisIdx}] = 0 is {t}", debug)
     foundPoint = (dirVector * t) + datamean
     dprint(f"Point found: {foundPoint}", debug)
-
-    return foundPoint
-
-def findTAxis(dirVector, axisIdx, givenPoint, axisVal) -> float:
-    # (x, y, z) = dirVector * t + (datamean)
-    # t is the scalar at which that axis hits the given axisIdx's coord
-    t = (axisVal -givenPoint[axisIdx]) / dirVector[axisIdx]
-    return t
+    return foundPoint, t
 
 def findPerpendicularOnLine(a, b, c):
     # Trying to find point D on a line AC that
@@ -464,6 +468,7 @@ def findDistFromLine(x1, x2, x0):
 
 # distance using projection of x0 onto x1x2
 # BUG
+# DELETE
 def findDistFromLineProjection(x1, x2, x0):
     x1 = np.array(x1)
     x2 = np.array(x2)
@@ -560,7 +565,7 @@ def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter
                 print("ERROR CALCULATING DIAMETER")
                 print(f"(scalar = {v[axisIdx]} - {datamean}) / {dirVector[axisIdx]}")
                 quit()  
-            # This is how much we need to multiply
+            # Scalar is how much we need to multiply
             # the direction vector by to get to the same plane as v[axisIdx]
             center = dirVector * scalar + datamean
             i += 1
@@ -585,22 +590,25 @@ def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter
     # print(centers)
     return avgDiameter, centers
         
-# Calculates diameter along each value, then averages it into
-# the specified chunk width. If dirvector has been calculated
-# per slice, goes along with slice dirvector
-#
-# THIS FUNCTION SERVES MULTIPLE PURPOSES
-# 1. Allows for getting the diameter as an average across values
-# 2. Supports the analyzation of diameter using straightened slices
-#    which it will do if the channel was sliced
-# 3. Supports the getting of diameter on a value-by-value basis
-# 4. Supports getting diameter along an unsliced channel
-#
-# In short, use this function for most diameter getting since it's
-# more powerful. calculateDiameter() is only able to be used in the
-# case of getting value-by-value avg diameters across an unsliced
-# computed mesh.
+
 def condenseDiameterByChunk(axisIdx, specifiedWidth, channel) -> tuple[dict, list]:
+    '''  Calculates diameter along each value, then averages it into
+         the specified chunk width. If dirvector has been calculated
+         per slice, goes along with slice dirvector
+        
+         THIS FUNCTION SERVES MULTIPLE PURPOSES
+         1. Allows for getting the diameter as an average across values
+         2. Supports the analyzation of diameter using straightened slices
+            which it will do if the channel was sliced
+         3. Supports the getting of diameter on a value-by-value basis
+         4. Supports getting diameter along an unsliced channel
+        
+         In short, use this function for most diameter getting since it's
+         more powerful. calculateDiameter() is only able to be used in the
+         case of getting value-by-value avg diameters across an unsliced
+         computed mesh.
+# '''
+
     # Calculate diameter across some specified width
     # Axis length to avg diameter at that length
     avgDiameter = {}    # Length : diameter in that length

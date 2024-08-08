@@ -25,5 +25,6 @@ class Slice(strtn.Straightenable):
         return avgDiameter, centers
     
     ## Overriding save
+    ## Unimplemented
     def save(self, filename):
         print("Can't save a slice!")

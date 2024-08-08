@@ -38,6 +38,11 @@ class Straightenable:
         self.centroidsUpdated = False # tracks if the centroids have been computed
         self.greatestSpanUpdated    = False # tracks if the greatest span has been kept updated
         self.diameterUpdated     = False # tracks if avgDiameter is up to date
+        self.datameanUpdated  = False
+
+        # Control flags
+        self.isAutoTargetAxis: bool     = None
+        self.useAxisDiameterCenterline: bool    = None
 
         # Methods
         self.diameterMethod = va.calculateDiameterByValue
@@ -47,8 +52,31 @@ class Straightenable:
             # Sets axisIdx as well
             self.greatestSpan = va.greatestSpan(self)
             self.greatestSpanUpdated = True
+            return self.greatestSpan
+        return self.greatestSpan
+
+    # Automatically set the target axis
+    # based on axis with the greatest span
+    def autoSetTargetAxis(self):
+        self.axisIdx = self.getGreatestSpan()[0]
+
+    # Set the target axis
+    # If none is given, axis auto targets to the one
+    # with the greatest span
+    def setTargetAxis(self, axisIdx: int = None):
+        if axisIdx == -1:
+            self.isAutoTargetAxis = True
+            print("Centerline will autofit")
+            return
+        self.isAutoTargetAxis = False
+        self.axisIdx = axisIdx
+        print("Centerline set to axis:", axisIdx)
     
     def sortPoints(self):
+        '''
+        Sorts the vectorList by the x, y, or z axis based
+        on the axisIdx
+        '''
         # Don't sort if already sorted
         if (self.isSorted):
             return
@@ -56,16 +84,20 @@ class Straightenable:
         self.isSorted = True
         print("Sorted")
 
-    def findCentroids(self):
+    def getCentroids(self):
         if self.centroidsUpdated == True:
-            return
+            return self.centroids
         self.centroids, self.vectorList = va.findCentroids(self)
-        va.findCenterline(self)
-        self.isSorted = True  # Finding the centroids sorts the points
         self.centroidsUpdated = True
+        self.isSorted = True  # Finding the centroids sorts the points
+        va.findCenterline(self)
+        self.datameanUpdated = True
+        return self.centroids
 
     def fitGeometry(self):
-        self.findCentroids()
+        self.getCentroids()
+        if self.isAutoTargetAxis:
+            self.autoSetTargetAxis()
         va.fitGeometry(self)
         # Rotation mixes points
         # centroids must be recomputed 
@@ -109,7 +141,7 @@ class Straightenable:
     # Make a diameter function for different slices
 
     def atThreshold(self):
-        pt = self.centroids[0] # Take a point from somewhere
+        pt = self.getCentroids()[0] # Take a point from somewhere
         radius = np.linalg.norm(pt - self.datamean)  # Get the dist
         c = 0
         for axisIdx, radians in enumerate(pt):
@@ -150,7 +182,17 @@ class Straightenable:
         if self.diameterUpdated:
             return self.centers
         self.computeDiameter()
-        self.centers
+        return self.centers
+    def getDatamean(self):
+        print(f"datamean updated: {self.datameanUpdated}")
+        if self.datameanUpdated == False:
+            print("Updating datamean")
+            va.findCenterline(self)
+            self.datameanUpdated = True
+            # self.dirVectorUpdated = True
+            return self.datamean
+        else:
+            return self.datamean
 
     def getSortedVL(self):
         if self.isSorted:
@@ -160,8 +202,11 @@ class Straightenable:
     # For data purposes, gets the single avg diameter across
     # entire channel
     def getEntireDiameter(self, width):
-        self.findCentroids()
-        avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, width, self)
+        self.getCentroids()
+        if not self.diameterUpdated:
+            self.diameter, centers = va.condenseDiameterByChunk(self.axisIdx, width, self)
+            self.diameterUpdated = True
+        avgDiameter = self.diameter
         avgDiameterNum = 0
         for d in avgDiameter.values():
             avgDiameterNum += d
@@ -175,9 +220,26 @@ class Straightenable:
         self.centroidsUpdated = False
         self.greatestSpanUpdated = False
         self.diameterUpdated = False
+        self.datameanUpdated = False
 
     def setDiameterMethod(self, method):
         self.diameterMethod = method
+
+    def setDiameterCenterline(self, axisIdx):
+        '''Sets an axis to be used as the centerline.
+        Set to -1 to reset to auto compute centerline
+
+        axisIdx: the index of the axis to be used as the centerline
+        '''
+        # Reset if -1
+        if axisIdx == -1:
+            self.useAxisDiameterCenterline = False
+            return
+        # Use the given axis as the centerline
+        self.useAxisDiameterCenterline = True
+        dirVector = [0, 0, 0]
+        dirVector[axisIdx] = 1
+        self.dirVector = dirVector
 
     ## Files
     # UNFINISHED
@@ -209,10 +271,11 @@ class Straightenable:
             print(string)
 
     def plotCentroids(self, ax):
-        self.findCentroids()
+        self.getCentroids()
         vp.plotCentroids(self.centroids, ax)
 
-    def plotMesh(self, ax, resolution = 1):
+    def plotMesh(self, ax, resolution = .5):
+        '''Plots the mesh. Default resolution of .5'''
         vp.plotMesh(self.vectorList, ax, resolution)
 
     def plotCenterLine(self, ax, debug = False):
@@ -233,15 +296,30 @@ class Straightenable:
         plt.show()
     
     def plotTargetAxis(self, ax, axisIdx):
+        '''Plots the cardinal axes and extends the line of the target axis if existing'''
         axes = [[0, 0], [0, 0], [0, 0]]
-        axes[axisIdx][1] = self.datamean[axisIdx]
-        vp.plotAxes(ax, self.datamean[axisIdx] / 4)
-        ax.plot3D(axes[0], axes[1], axes[2])
+        datamean = self.getDatamean()
+        if axisIdx is not None:
+            print(f"Axis is {self.axisIdx}")
+            axes[axisIdx][1] = datamean[axisIdx]
+            vp.plotAxes(ax, datamean[axisIdx] / 4)
+            ax.plot3D(axes[0], axes[1], axes[2], c = "black")
+        else:
+            print("No axis targeted")
+            print(f"datemean: {datamean}")
+            vp.plotAxes(ax, (datamean[0] + datamean[1] + datamean[2]) / 3)
+
+    def showMeshPreview(self, ax, resolution: int = .5):
+        print("\nShowing Mesh Preview:")
+        print(f"Auto-targeting: {self.isAutoTargetAxis}\nAxis selected: {self.axisIdx}\n")
+        self.plotTargetAxis(ax, self.axisIdx)
+        self.plotMesh(ax, resolution)
+        plt.show()
 
     # Mostly deprecated, use chunkdiameter to show diameter plotted
     # along slice centerlines
     def plotDiameter(self, ax):
-        self.findCentroids()
+        self.getCentroids()
         self.computeDiameter()
         vp.plotDiameter(ax, self.getDiameter())
         
@@ -271,6 +349,7 @@ class Straightenable:
         self.showCenters(self.getCenters())
 
     def saveDiameterPlot(self, filepath : str):
+        plt.clf()
         ax = plt.axes()
         self.plotDiameter(ax)
         plt.savefig(filepath)
@@ -285,16 +364,17 @@ class Straightenable:
             y.append(v[1])
             z.append(v[2])
         ax1 = plt.axes(projection= '3d')
-        self.plotMesh(ax1, .01)
+        self.plotMesh(ax1, .001)
         ax1.scatter(x, y, z)
         print(f"Centers: {len(centers)}")
         plt.title("Centers")
         plt.show()
 
     # TODO: Make chunkdiameter called by getDiameter
-    def plotChunkDiameter(self, specifiedWidth):
+    def showChunkDiameter(self, specifiedWidth):
+        plt.clf()
         ax = plt.axes()
-        self.findCentroids()
+        self.getCentroids()
         avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, specifiedWidth, self)
         avgDiameterNum = 0
         for d in avgDiameter.values():
@@ -320,3 +400,39 @@ class Straightenable:
         plt.title("Diameter across the longest axis")
         plt.show()
         self.showCenters(centers)
+        self.diameter = avgDiameter
+        self.diameterUpdated = True
+
+    def cropDiameter(self, lower, upper):
+        '''Takes the diameter calculated and crops based on the lower
+        and upper values given'''
+        diameter = self.diameter.copy()
+        # Add to the new dictionary if within bounds
+        for slice in self.diameter.items():
+            if slice[0] < lower or slice[0] > upper:
+                diameter.pop(slice[0])
+        self.diameter = diameter
+        
+
+    def showCroppedChunkDiameter(self, ax, lower, upper):
+        '''Takes the diameter calculated and crops based on the lower
+        and upper values given'''
+        self.cropDiameter(lower, upper)
+        vp.plotDiameter(ax, self.diameter)
+        
+        axis = None
+        match self.axisIdx:
+            case 0:
+                axis = "x"
+            case 1:
+                axis = "y"
+            case 2:
+                axis = "z"
+            case _:
+                print("Invalid axis")
+                quit()
+        plt.xlabel(f"{axis} axis")
+        plt.ylabel("Diameter")
+        #ax.set_ylim([0, None])
+        plt.title("Diameter across the longest axis")
+        plt.show()

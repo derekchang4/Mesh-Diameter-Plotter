@@ -5,16 +5,84 @@ import matplotlib.pyplot as plt
 import numpy as np
 import Channel as chan
 
+
+# This is the main file. This is where the code that 
+
 # Setup:
 # 1. Create mesh object with file path
 
+def commandLineInterface():
+    '''
+    This is the function that runs a command-line interface
+    '''
+    filename = input("Paste in the file path: ")
+    channel = chan.Channel(filename)
+    channel.readVectors()
+    """
+    [Options]
+    1. Plot mesh
+    2. Straighten
+    3. Print total rotation
+    4. Print avg diameter
+    5. Plot diameter across length
+    """
+
+def commandLine(channel):
+    #print("""Actions:
+    #      [1] Rotate
+    #      [2]
+    #      """)
+    print("\n###              Command line started            ###")
+    print("You have access to the channel object. You can use this to debug : ex. print(channel.vectorList)")
+    print("Enter 'q' to quit")
+    command = input("\nEnter your python command: ")
+    while command != 'q':
+        try:
+            exec(command)
+        except Exception as error:
+            print("An exception occured: ", type(error).__name__)
+        command = input("\n$ ")
+
+def main():
+    channel = chan.Channel(r"C:\Users\dchan\Downloads\Illinois\CT\Research Rush 7,31\High\surf\H5_z20_5um.wrl")
+    channel.readVectors()
+    ax = plt.axes(projection = '3d')
+
+    channel.setTargetAxis(2)
+    channel.showMeshPreview(ax, .01)
+    #channel.fitGeometry()
+    #channel.show(ax, .01)
+    channel.straighten(.001, False)
+    # vlist = channel.getSortedVL()
+
+    # Show datamean
+    #dm = channel.datamean
+    #print(dm)
+    #ax = plt.axes(projection = '3d')
+    #channel.plotMesh(ax, .01)
+    #ax.scatter(dm[0], dm[1], dm[2], s= 20)
+    #plt.show()
+    channel.setTargetAxis(2)
+    channel.setDiameterCenterline(2)
+    channel.showChunkDiameter(0)
+    channel.showCroppedChunkDiameter(ax, 10, 500)
+    channel.getEntireDiameter(0)
+
+main()
+
+
+
+
+
+## Below are old test-runs. They aren't that important and
+## can be deleted but these can be used as examples
 def testingOGCylinder():
     mesh = chan.Channel("./cylinder_test.stl")
     mesh.readVectors()
     print(mesh.VECTORCOUNT, "Vertices")
     mesh.getGreatestSpan()
     print("Longest axis: ", mesh.greatestSpan)
-    mesh.findCentroids()
+    mesh.getCentroids()
 
     ax = plt.axes(projection= '3d')
     ax.scatter(0, 0, 0, s=20, color="black")
@@ -26,7 +94,7 @@ def testingOGCylinder():
     mesh.plotMesh(ax)
     mesh.plotCenterLine(ax)
     # Get the intercepts for 0 along the axis
-    intercept = va.findPointAlongLine(mesh.dirVector, mesh.axisIdx, mesh.datamean)
+    intercept = va.findPointAlongLineWithAxis(mesh.dirVector, mesh.axisIdx, mesh.datamean)
     ax.scatter(intercept[0], intercept[1], intercept[2], color="red")
 
     mesh.fitGeometry()
@@ -65,7 +133,7 @@ def bigCylinderTest():
     plt.title("Original")
     mesh.show()
 
-    chan.updateIterationShown(7) # Show every 7th iteration
+    chan.updateIterationShown(7) # Show every 7th iteration (doesn't work still :/)
     mesh.straighten()
     mesh.plotDiameter()
 
@@ -103,21 +171,6 @@ def basicHighVector():
     channel.straighten(.001)
     channel.plotDiameter()
 
-def commandLine(channel):
-    #print("""Actions:
-    #      [1] Rotate
-    #      [2]
-    #      """)
-    print("\n###              Command line started            ###")
-    print("You have access to the channel object. You can use this to debug : ex. print(channel.vectorList)")
-    print("Enter 'q' to quit")
-    command = input("\nEnter your python command: ")
-    while command != 'q':
-        try:
-            exec(command)
-        except Exception as error:
-            print("An exception occured: ", type(error).__name__)
-        command = input("\n$ ")
 
 def main1():
     channel = chan.Channel("files/bottom.wrl")
@@ -136,27 +189,5 @@ def main1():
     #     print(f"  centroids: {s.centroids}")
     #     num += 1
     # Find amira documentation for thresholding: None found!
-    channel.plotChunkDiameter(0)
+    channel.showChunkDiameter(0)
     #commandLine(channel)
-
-def main():
-    channel = chan.Channel(r"C:\Users\dchan\Downloads\Illinois\CT\Longsample_etched\Data\Cleaned no hole\longsample_etched_60_cleanednh.wrl")
-    channel.readVectors()
-    channel.straighten(show=False)
-    # vlist = channel.getSortedVL()
-    channel.plotChunkDiameter(0)
-
-main()
-
-
-
-
-# ## Test for sign-mantissa conversion
-# value = "7.06098e-01"
-# idx = value.find("e")
-# numVal = float(value[:idx])
-# exp = int(value[idx + 1:])
-# numVal *= 10 ** exp
-# print("Exponent: ", exp)
-# print("Original:", value)
-# print("Post-exponentiated:", numVal)

@@ -12,6 +12,7 @@ class GUI_Handler:
         self.window:            Tk = None
         self.plotFrame:         Frame = None
         self.resolution:        float = 1       # TODO: abstract it
+
         # Flags
         self.foundCentroids:    bool = False    # NOTE: could get this from mesh
         self.straightened:      bool = False
@@ -80,7 +81,7 @@ class GUI_Handler:
         if self.foundCentroids == True:
             return
         # Finds the centroids for the object
-        self.mesh.findCentroids()
+        self.mesh.getCentroids()
         self.foundCentroids = True
         self.mesh.plotCentroids(self.axes)
     
@@ -107,7 +108,7 @@ class GUI_Handler:
         self.checkMesh()
         # call the plot diameter function of Channel
         # TODO: Add functionality to intake width
-        self.mesh.plotChunkDiameter(specifiedWidth = 0)
+        self.mesh.showChunkDiameter(specifiedWidth = 0)
 
     def reset(self):
         self.window.destroy()
