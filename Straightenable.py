@@ -1,5 +1,7 @@
+'''
 # This file contains the representation of a mesh from a .STL file
 # and contains functions related to analyzing and plotting it
+'''
 import VectorReader as vr
 import VectorAnalyzer as va
 import VectorPlotter as vp
@@ -16,6 +18,7 @@ class Straightenable:
         self.VECTORCOUNT  = None
         self.OGVECTORLIST = None
         self.ITERATIONNUM = ITERATIONNUM
+        self.SLICES = const.SLICES ## Default NumSlices
 
         # Updates as the object rotates
         self.axisIdx        = None
@@ -47,6 +50,9 @@ class Straightenable:
         # Methods
         self.diameterMethod = va.calculateDiameterByValue
 
+        # Constants
+        self.DEFAULTRESOLUTION = .01
+
     def getGreatestSpan(self):
         if self.greatestSpanUpdated == False:
             # Sets axisIdx as well
@@ -55,22 +61,24 @@ class Straightenable:
             return self.greatestSpan
         return self.greatestSpan
 
-    # Automatically set the target axis
-    # based on axis with the greatest span
     def autoSetTargetAxis(self):
+        '''Automatically sets the target axis based on the 
+        axis with the greatest span'''
         self.axisIdx = self.getGreatestSpan()[0]
 
     # Set the target axis
     # If none is given, axis auto targets to the one
     # with the greatest span
     def setTargetAxis(self, axisIdx: int = None):
+        '''Sets the target axis to the index of the given axis. If -1 is inputted,
+        sets the mesh to auto target the axis with the greatest span'''
         if axisIdx == -1:
             self.isAutoTargetAxis = True
-            print("Centerline will autofit")
+            print("Mesh axis will autofind")
             return
         self.isAutoTargetAxis = False
         self.axisIdx = axisIdx
-        print("Centerline set to axis:", axisIdx)
+        print("Mesh axis set to axis:", axisIdx)
     
     def sortPoints(self):
         '''
@@ -84,9 +92,12 @@ class Straightenable:
         self.isSorted = True
         print("Sorted")
 
-    def getCentroids(self):
+    def getCentroids(self) -> list[tuple[float, float, float]]:
+        '''Gets the centroids of the mesh'''
         if self.centroidsUpdated == True:
             return self.centroids
+        if self.isAutoTargetAxis:
+            self.autoSetTargetAxis()
         self.centroids, self.vectorList = va.findCentroids(self)
         self.centroidsUpdated = True
         self.isSorted = True  # Finding the centroids sorts the points
@@ -103,9 +114,8 @@ class Straightenable:
         # centroids must be recomputed 
         self.resetState()
 
-    # Straightens the channel iteratively until threshold in Straightenable.py
-    # Then calculates the diameters across the axis
     def straighten(self, resolution = .01, show = True):
+        '''Straightens the channel iteratively until the threshold set'''
         if show:
             print(f"Resolution {resolution}")
             ax1 = plt.axes(projection = '3d')
@@ -173,7 +183,14 @@ class Straightenable:
         #calculateDiameterBetweenCentroids(axisIdx, vectorList, points, avgDiameter: dict = None) -> tuple[dict, list]:
 
     ### Setters and Getters ###
-    def getDiameter(self):
+    def getNumSlices(self) -> int:
+        '''Gets the number of slices used to compute the mesh's centroids'''
+        return self.SLICES
+    def setNumSlices(self, numSlices: int):
+        '''Sets the number of slices used to compute the mesh's centroids'''
+        self.SLICES = numSlices
+    def getDiameter(self) -> dict[float]:
+        '''Gets the diameter dictionary along the mesh's center axis'''
         if self.diameterUpdated:
             return self.diameter
         self.computeDiameter()
@@ -195,6 +212,7 @@ class Straightenable:
             return self.datamean
 
     def getSortedVL(self):
+        '''Gets the point cloud as a sorted list'''
         if self.isSorted:
             return self.vectorList
         self.sortPoints()
@@ -214,8 +232,8 @@ class Straightenable:
         print(f"Average diameter across object: {avgDiameterNum}")
         return avgDiameterNum
 
-    # Sets all flags to false so everything will be recomputed
     def resetState(self) -> None:
+        '''Sets all flags to false so everything will be recomputed'''
         self.isSorted = False
         self.centroidsUpdated = False
         self.greatestSpanUpdated = False
@@ -227,7 +245,7 @@ class Straightenable:
 
     def setDiameterCenterline(self, axisIdx):
         '''Sets an axis to be used as the centerline.
-        Set to -1 to reset to auto compute centerline
+        Set to -1 to reset to auto centerline (axis with longest span)
 
         axisIdx: the index of the axis to be used as the centerline
         '''
@@ -349,12 +367,16 @@ class Straightenable:
         self.showCenters(self.getCenters())
 
     def saveDiameterPlot(self, filepath : str):
+        '''Saves the diameter plot to the given filepath'''
         plt.clf()
+
         ax = plt.axes()
         self.plotDiameter(ax)
-        plt.savefig(filepath)
+        plt.savefig(filepath, format= "png")
 
     def showCenters(self, centers):
+        '''Plots the mesh and plots the center points used
+        in the diameter calculation'''
         # Showing centers in relation
         x = []
         y = []
