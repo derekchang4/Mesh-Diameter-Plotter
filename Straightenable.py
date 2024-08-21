@@ -22,6 +22,7 @@ class Straightenable:
 
         # Updates as the object rotates
         self.axisIdx        = None
+        self.diameterAxis   = None  # the axis that the diameter is computed on
         self.greatestSpan   = None  # tracks the axis of greatest span and the units it spans
         self.vectorList     = None  # required for sorting and ordering; current position
         self.centroids      = None  # represents the centroids of the slices of the channel
@@ -45,7 +46,7 @@ class Straightenable:
 
         # Control flags
         self.isAutoTargetAxis: bool     = None
-        self.useAxisDiameterCenterline: bool    = None
+        self.manualAxisDiameterCenterline: bool    = None
 
         # Methods
         self.diameterMethod = va.calculateDiameterByValue
@@ -176,7 +177,7 @@ class Straightenable:
     def computeDiameter(self, width = 0):
         if self.diameterUpdated:
             return
-        self.diameter, self.centers = self.diameterMethod(self.axisIdx, self.vectorList, self.dirVector, self.datamean)
+        self.diameter, self.centers = self.diameterMethod(self.getDiameterCenterline(), self.vectorList, self.dirVector, self.datamean)
         self.diameterUpdated = True
         #calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]
         #calculateDiameterAlongLine(axisIdx, vectorList, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]:
@@ -249,15 +250,26 @@ class Straightenable:
 
         axisIdx: the index of the axis to be used as the centerline
         '''
+        if axisIdx > 2 or axisIdx < -1:
+            raise Exception(f"Invalid axis set for diameter centerline: {axisIdx}")
         # Reset if -1
         if axisIdx == -1:
-            self.useAxisDiameterCenterline = False
+            self.manualAxisDiameterCenterline = False
+            self.diameterAxis = -1
             return
         # Use the given axis as the centerline
-        self.useAxisDiameterCenterline = True
-        dirVector = [0, 0, 0]
+        self.manualAxisDiameterCenterline = True
+        self.diameterAxis = axisIdx
+        dirVector = np.array([0, 0, 0])
         dirVector[axisIdx] = 1
         self.dirVector = dirVector
+
+    def getDiameterCenterline(self):
+        '''Gets the centerline to be used for the diameter'''
+        if self.manualAxisDiameterCenterline:
+            return self.diameterAxis
+        else:
+            return self.axisIdx
 
     ## Files
     # UNFINISHED
@@ -394,10 +406,12 @@ class Straightenable:
 
     # TODO: Make chunkdiameter called by getDiameter
     def showChunkDiameter(self, specifiedWidth):
+        '''Calculates the diameters along the centerline and shows a line plot'''
         plt.clf()
         ax = plt.axes()
         self.getCentroids()
-        avgDiameter, centers = va.condenseDiameterByChunk(self.axisIdx, specifiedWidth, self)
+        print("Centerline is", self.getDiameterCenterline())
+        avgDiameter, centers = va.condenseDiameterByChunk(self.getDiameterCenterline(), specifiedWidth, self)
         avgDiameterNum = 0
         for d in avgDiameter.values():
             avgDiameterNum += d

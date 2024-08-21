@@ -1,16 +1,17 @@
 
 
 ###     Rotation    ###
-## Abs value
-THRESHOLD = .01      # The threshold for change in arclength
-ITERATIONNUM = 1    # The nth iteration to plot display
+THRESHOLD = .01      
+'''The threshold for change in arclength'''
+ITERATIONNUM = 1    
+'''The nth iteration to plot display'''
 
 ###     Analysis    ###
-SLICES = 5          # The number of slices to make for calculating
-                    # centroids
+SLICES = 5          
+'''The number of slices to make for calculating centroids'''
 
-
-
+MINISLICES = 2
+'''The number of minislices in a slice'''
 
 
 ###     Printing    ###

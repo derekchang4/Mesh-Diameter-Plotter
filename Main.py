@@ -44,16 +44,15 @@ def commandLine(channel):
         command = input("\n$ ")
 
 def main():
-    channel = chan.Channel(r"C:\Users\dchan\Downloads\Illinois\CT\Research Rush 7,31\High\surf\H5_z20_5um.wrl")
+    channel = chan.Channel(r"C:\Users\dchan\Downloads\Illinois\ETRL\OneDrive_2024-08-20\8.13 Z1~Z4 Samples\clean\junseoc2_51_Long-Sample_113148.surf_Z1.wrl")
     channel.readVectors()
     ax = plt.axes(projection = '3d')
 
-    channel.setTargetAxis(2)
-    channel.showMeshPreview(ax, .01)
-    #channel.fitGeometry()
-    #channel.show(ax, .01)
+    channel.setTargetAxis(-1)   # Target axis always needs to be set
+    channel.showMeshPreview(ax, .005)
+    
     channel.straighten(.001, False)
-    # vlist = channel.getSortedVL()
+    channel.showMeshPreview(ax, .002)
 
     # Show datamean
     #dm = channel.datamean
@@ -65,7 +64,7 @@ def main():
     channel.setTargetAxis(2)
     channel.setDiameterCenterline(2)
     channel.showChunkDiameter(0)
-    channel.showCroppedChunkDiameter(ax, 10, 500)
+    channel.showCroppedChunkDiameter(ax, 100, 4800)
     channel.getEntireDiameter(0)
 
 main()

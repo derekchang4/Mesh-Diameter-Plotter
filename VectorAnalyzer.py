@@ -28,16 +28,15 @@ SLICES = const.SLICES
 NTHTERM = const.NTHTERM
 SKIPLEN = const.SKIPLEN
 
-MINISLICES = 2
+MINISLICES = const.MINISLICES
 
 def dprint(string, debug = False):
     if (debug):
         print(string)
 
-# Finds the axis with the greatest span
-# and returns the letter of that axis
 def greatestSpan(mesh: strn.Straightenable):
-    
+    ''' Finds the axis with the greatest span
+ and returns the letter and span of that axis'''
     sampleVector = mesh.vectorList[0]                    #Get some vector
     xMin = sampleVector[0]
     xMax = sampleVector[0]
@@ -91,6 +90,7 @@ def greatestSpan(mesh: strn.Straightenable):
 
 
 def findCentroids(mesh, debug = False):
+    '''Gets a list of the centroids of the mesh using # of slices'''
     #Sort vectors by x, y, or z parameter
     centroids = []
     _, span = greatestSpan(mesh) 
@@ -104,6 +104,8 @@ def findCentroids(mesh, debug = False):
             axisIdx = 1
         case 2:
             axisIdx = 2
+        case None:
+            print("Axis has not been set (try calling channel.setTargetAxis()); Quitting")
         case _:
             print("Invalid axis; Quitting")
             quit()
@@ -113,7 +115,7 @@ def findCentroids(mesh, debug = False):
     vectorList = mesh.vectorList
     print(f"Axis idx: {axisIdx}")
     # print(vectorList)
-    sliceSize = span / SLICES
+    sliceSize = span / mesh.SLICES
     max = vectorList[0][axisIdx]
     min = vectorList[-1][axisIdx]
     print(f"Finding centroids- max= {vectorList[0]} min= {vectorList[-1]}")
@@ -127,12 +129,12 @@ def findCentroids(mesh, debug = False):
     v = next(it)
     dprint(f"Span: {mesh.greatestSpan}  SliceSize: {sliceSize}", debug)
     dprint(f"Floor: {floor}  Ceiling: {ceiling}", debug)
-    for i in range(SLICES):
+    for i in range(mesh.SLICES):
         numVertices = 0
         sums = [0, 0, 0]
         # Move the floor all the way down if on last slice
         # to account for slight inaccuracy from floats
-        if (i == SLICES - 1):
+        if (i == mesh.SLICES - 1):
             floor = min - 1
         #print(f"First point: {v[axisIdx]} <= {ceiling} = {v[axisIdx] <= ceiling}")
         #print(f"Within constraints?  {v[axisIdx] > floor and v[axisIdx] <= ceiling}")
@@ -171,9 +173,9 @@ def sortY(v):
 def sortZ(v):
     return v[2]
 
-# Sorts the points based on the letter axis
-# highest to lowest
-def sortPoints(axis, vectorCollection):
+
+def sortPoints(axis, vectorCollection: list):
+    '''Sorts the vectors along the given letter axis highest to lowest'''
     if (type(vectorCollection) == dict):
         vectorList = list(vectorCollection.keys())
     else:
@@ -221,16 +223,16 @@ def slicePoints(axisIdx, vectorList):
 # This method takes in a vector list and creates a list
 # of Slices, finding the centroids of minislices, along with
 # their dirVector
-def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
+def sliceMiniSlices(mesh, vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
     # Expects a sorted list
-    print(f"\nComputing {MINISLICES} minislices per slice ({SLICES}) across axis[{axisIdx}]")
+    print(f"\nComputing {MINISLICES} minislices per slice ({mesh.SLICES}) across axis[{axisIdx}]")
     if (MINISLICES < 2):
         print(f"Not enough centroids to find a line! MINISLICES = {MINISLICES} < 2")
         quit()
     # [Slice, Slice, ...]
     slices = []
     print(f"  Top Point: {vectorList[0]}\n  Bottom point: {vectorList[-1]}")
-    sliceSize = greatestSpanSize / SLICES
+    sliceSize = greatestSpanSize / mesh.SLICES
     # List must be sorted
     it = iter(vectorList)
     v = next(it)
@@ -240,7 +242,7 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
     miniBoundary = v[axisIdx] - miniSliceSize
     
     # For each slice
-    for i in range(SLICES):
+    for i in range(mesh.SLICES):
         print(f"Computing slice {i}")
         miniCentroids = []
         slice = slc.Slice()
@@ -279,7 +281,7 @@ def sliceMiniSlices(vectorList, axisIdx, greatestSpanSize) -> list[slc.Slice]:
                 # Set to the boundary
                 miniBoundary = boundary
         # If at end of mesh, set boundary below
-        if i != SLICES - 2:
+        if i != mesh.SLICES - 2:
             boundary -= sliceSize
         else:
             boundary -= (sliceSize + 1)
@@ -328,8 +330,8 @@ def rotate(vectorList, theta, axisIdx, radians= False):
     for i in range(len(vectorList)):
         vectorList[i] = Rotation[axisIdx] @ vectorList[i]
 
-#Find a fit for the centroids
 def findCenterline(mesh: strn.Straightenable):
+    '''Finds a linear fit for the centroids of the mesh'''
     centroids = np.array(mesh.getCentroids())
     # Finding line of best fit
     print(f"Centroids = {centroids}")
@@ -339,7 +341,7 @@ def findCenterline(mesh: strn.Straightenable):
     # Use SVD to find the direction of the 
     # vector of best fit
     uu, dd, vv = np.linalg.svd(centroids - datamean)
-    if not mesh.useAxisDiameterCenterline:
+    if not mesh.manualAxisDiameterCenterline:
         print("Centerline autocomputed")
         mesh.dirVector = vv[0]
         
@@ -408,6 +410,8 @@ def findPointAlongLineWithAxis(dirVector, axisIdx, datamean, axisVal = 0, debug 
     # t is the scalar at which that axis hits 0
     t = (axisVal - datamean[axisIdx]) / dirVector[axisIdx]
     dprint(f"t at coord[{axisIdx}] = 0 is {t}", debug)
+    print(f"({dirVector} * {t}) + {datamean}")
+    print(f"{type(dirVector)} {type(t)} {type(datamean)}")
     foundPoint = (dirVector * t) + datamean
     dprint(f"Point found: {foundPoint}", debug)
     return foundPoint, t
@@ -536,8 +540,8 @@ def calculateDiameterAlongLine(axisIdx, vectorList, dirVector, datamean, avgDiam
             #print("Shortened", v, "vs", center)
     return avgDiameter, centers
 
-# Calculates average diameter along some centerline from each "x" value
 def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter: dict = None) -> tuple[dict, list]:
+    '''Calculates average diameter along some centerline from each "axis" value'''
     dirVector = np.array(dirVector)
     # Use the given dict if ones given
     if (not isinstance(avgDiameter, dict)):
@@ -545,6 +549,7 @@ def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter
     # Axis length to avg diameter at that length
     centers = []
     slices = slicePoints(axisIdx, sortedVL)
+    #print(f"VectorList {sortedVL[1:1000]}")
     it = iter(sortedVL)
     v = next(it)
     i = 0
@@ -559,8 +564,9 @@ def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter
                 print("EXCEPTION CAUGHT")
                 print(f"(scalar = {v[axisIdx] - datamean}) / {dirVector[axisIdx]}")
                 print(f"= {(v[axisIdx] - datamean) / dirVector[axisIdx]}")
+                raise Exception("Divide by zero")
             try:
-                scalar = (v[axisIdx] - datamean) / dirVector[axisIdx]  
+                scalar = (v[axisIdx] - datamean) / dirVector[axisIdx] 
             except:
                 print("ERROR CALCULATING DIAMETER")
                 print(f"(scalar = {v[axisIdx]} - {datamean}) / {dirVector[axisIdx]}")
@@ -576,6 +582,7 @@ def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter
             elif i % (NTHTERM * 5) == 0:
                centers.append(center)
                #print("Shortened", v, "vs", center)
+               
             # Euclidean distance using numpy
             dist = np.linalg.norm(v - center)
             totalDiameter += dist * 2
@@ -588,6 +595,7 @@ def calculateDiameterByValue(axisIdx, sortedVL, dirVector, datamean, avgDiameter
     # Returns dict of lengths along longest axis to avg diameters
     # print("Centers")
     # print(centers)
+    # print(f"Num iterations in diameter {i}")
     return avgDiameter, centers
         
 

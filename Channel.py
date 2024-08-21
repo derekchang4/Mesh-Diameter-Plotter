@@ -27,25 +27,6 @@ class Channel(strtn.Straightenable):
         self.filename     = filename
         self.VECTORMAP    = None
 
-        ## MOVED TO STRAIGHTENABLE ##
-        # self.VECTORCOUNT  = None
-        # self.OGVECTORLIST = None
-        # self.ITERATIONNUM = ITERATIONNUM
-
-        # # Updates as the object rotates
-        # self.axisIdx        = None
-        # self.greatestSpan   = None  # tracks the axis of greatest span and the units it spans
-        # self.vectorList     = None  # required for sorting and ordering; current position
-        # self.centroids      = None  # represents the centroids of the slices of the channel
-        # self.datamean       = None  # represents the center of the channel
-        # self.dirVector      = None  # represents the slope of the centerline
-        # self.totalRotation     = [0, 0, 0]  # tracks the rotation applied to the original mesh (in radians)
-        # self.curRotation       = [0, 0, 0]  # the amount the object was rotated by the current iteration
-        # self.sorted         = False # tracks if the vectorList has been sorted
-        # self.centroidsFound = False # tracks if the centroids have been computed
-        # self.change         = None  # the amount of change the mesh went through in the last iteration
-        ## MOVED TO STRAIGHTENABLE ##
-
         # Post straightened data
         self.slices         = None  # A vector list with points separated by slices
         self.slicesCurrent  = False # Flag for if the slices are up to date

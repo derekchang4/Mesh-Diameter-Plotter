@@ -18,7 +18,7 @@ MAXMEGS = 3000
 MAXSIZE = MAXMEGS * BYTESINMEG
 
 # Enter the folder path
-directory = r"C:\Users\dchan\Downloads\Illinois\CT\Research Rush 7,31\Low\surf"
+directory = r"C:\Users\dchan\Downloads\Illinois\ETRL\OneDrive_2024-08-20\8.13 Z1~Z4 Samples\clean"
 fileDiameters = {}
 
 # Accessing each file in the folder
@@ -38,12 +38,14 @@ for filename in os.listdir(directory):
     ##### Your code here
     channel = ch.Channel(f)
     channel.readVectors()
-    channel.setTargetAxis(2)
-    channel.setDiameterCenterline(2)
-    # channel.straighten(show=False)
-    # channel.saveDiameterPlot(fr"{directory}\{filename[:-4]}")
-    channel.getEntireDiameter(0)
-    channel.cropDiameter(10, 500)
+    channel.setTargetAxis(-1)    # Set which axis to target to slice from and straighten to
+    # channel.setDiameterCenterline(2)    # Set which axis to measure diameter from
+    channel.straighten(show=False)
+    channel.saveDiameterPlot(fr"{directory}\{filename[:-4]}.png")
+
+    # Crop off the ends that enclose the mesh
+    # The axis values can be checked by plotting the diameter
+    #channel.cropDiameter(100, 4800)  
     diameter = channel.getEntireDiameter(0)
     fileDiameters[filename] = diameter
     ###############
@@ -54,3 +56,28 @@ for filename in os.listdir(directory):
 print("\nDiameters found")
 for f, diameter in fileDiameters.items():
     print(f"{f} = {diameter}")
+
+
+def getAllDiameters(directory: str, maxMegabytes = MAXMEGS):
+    # Enter the folder
+    fileDiameters = {}
+    for filename in os.listdir(directory):
+        print(filename)
+        f = os.path.join(directory, filename)
+        size = os.path.getsize(f)
+        if ".wrl" not in filename and ".stl" not in filename:
+            print(f"{filename} incompatible file")
+            continue
+        if size > maxMegabytes * BYTESINMEG:
+            print(f"Skipping {filename}, greater than {maxMegabytes} megabytes")
+            continue
+        channel = ch.Channel(f)
+        channel.readVectors()
+        channel.straighten(show=False)
+        diameter = channel.getEntireDiameter(0)
+        fileDiameters[filename] = diameter
+        print("\n")
+
+    print("\nDiameters found")
+    for f, diameter in fileDiameters.items():
+        print(f"{f} = {diameter}")

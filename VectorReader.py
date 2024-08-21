@@ -7,11 +7,12 @@ import Constants as const
 
 NTHLINE = const.NTHLINE
 
-# This file reads an stl file and produces a list of all
-# vertexes contained in the mesh. Excludes duplicate vertexes
-# (x, y, z) : # times counted
 
-def readVectorsSTL(fileName, file = None):
+
+def readVectorsSTL(fileName, file = None) -> dict[tuple[float, float, float], int]:
+    ''' This file reads an stl file and produces a dictionary of all
+ vertexes contained in the mesh. Excludes duplicate vertexes
+ (x, y, z) : # times counted'''
     if file == None:
         file = open(fileName)   # default on "rt" (read, text)
     map = {}                # empty dictionary
@@ -42,7 +43,10 @@ def readVectorsSTL(fileName, file = None):
     file.close()
     return map
 
-def readVectorsWRL(fileName):
+def readVectorsWRL(fileName) -> dict[tuple[float, float, float], int]:
+    ''' This file reads an stl file and produces a dictionary of all
+ vertexes contained in the mesh. Excludes duplicate vertexes
+ (x, y, z) : # times counted'''
     file = open(fileName)
     map = {}
 
@@ -85,6 +89,8 @@ def readVectorsWRL(fileName):
     return map
 
 def sciToFloat(coord):
+    '''Helper function for converting numbers in
+    scientific notation to a float'''
     idx = coord.find("e")
     ## Apparently e not necessary
     if idx == -1:
@@ -99,7 +105,8 @@ def sciToFloat(coord):
 
 # Returns a 3-tuple using a 3-array of 
 # numbers in scientific notation
-def readVertex(file):
+def readVertex(file) -> tuple[float, float, float]:
+    '''Parses a space delimited x y z string and returns it as a tuple'''
     # Read in points, strip excess
     point = file.readline().strip()[6:].split()
     #print(point)
@@ -122,8 +129,9 @@ def readLineWRL(line):
     return points
 
 # Returns a 3-tuple of coords
-def readVertexWRL(pointString):
-    point = pointString.split()
+def readVertexWRL(pointString) -> tuple[float, float, float]:
+    '''Takes in a space delimited string with 3 values and returns a coordinate tuple'''
+    point = pointString.strip().split()
     x = float(point[0])
     y = float(point[1])
     z = float(point[2])
