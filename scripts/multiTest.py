@@ -36,19 +36,20 @@ for filename in os.listdir(directory):
         continue
 
     ##### Your code here
+    # f represents the filename of one file in the folder each loop
     channel = ch.Channel(f)
     channel.readVectors()
     channel.setTargetAxis(-1)    # Set which axis to target to slice from and straighten to
     # channel.setDiameterCenterline(2)    # Set which axis to measure diameter from
     channel.straighten(show=False)
-    channel.saveDiameterPlot(fr"{directory}\{filename[:-4]}.png")
+    channel.saveDiameterPlot(fr"{directory}\{filename[:-4]}.png", filename)
 
+    ###########
     # Crop off the ends that enclose the mesh
     # The axis values can be checked by plotting the diameter
     #channel.cropDiameter(100, 4800)  
-    diameter = channel.getEntireDiameter(0)
+    diameter = channel.getAverageDiameter(0)
     fileDiameters[filename] = diameter
-    ###############
 
     print("\n")
 
@@ -74,7 +75,7 @@ def getAllDiameters(directory: str, maxMegabytes = MAXMEGS):
         channel = ch.Channel(f)
         channel.readVectors()
         channel.straighten(show=False)
-        diameter = channel.getEntireDiameter(0)
+        diameter = channel.getAverageDiameter(0)
         fileDiameters[filename] = diameter
         print("\n")
 

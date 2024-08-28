@@ -65,7 +65,7 @@ def main():
     channel.setDiameterCenterline(2)
     channel.showChunkDiameter(0)
     channel.showCroppedChunkDiameter(ax, 100, 4800)
-    channel.getEntireDiameter(0)
+    channel.getAverageDiameter(0)
 
 main()
 
@@ -106,7 +106,6 @@ def rotatedCylinderTest():
     mesh = chan.Channel("files/rotatedCylinder.stl")
     mesh.readVectors()
     ax1 = plt.axes(projection= '3d')
-    #mesh.findCentroids()
     #mesh.plotCenterLine(ax1)
     #mesh.plotMesh(ax1)
     plt.title("Original")
@@ -122,7 +121,7 @@ def rotatedCylinderTest():
     mesh.plotMesh(ax2)
     plt.show()
 
-    mesh.plotDiameter()
+    mesh.plotDiameter(ax2, mesh.filename)
 
 def bigCylinderTest():
     # HOLY MOLY 652636 Vertices
@@ -134,7 +133,7 @@ def bigCylinderTest():
 
     chan.updateIterationShown(7) # Show every 7th iteration (doesn't work still :/)
     mesh.straighten()
-    mesh.plotDiameter()
+    mesh.plotDiameter(ax, mesh.filename)
 
 def manualRotationTest():
     mesh = chan.Channel("files/rotatedCylinder.stl")
@@ -168,7 +167,8 @@ def basicHighVector():
     channel.readVectors()
     #mesh.updateIterationShown(1)
     channel.straighten(.001)
-    channel.plotDiameter()
+    ax = plt.axes(projection = '3d')
+    channel.plotDiameter(ax, channel.filename)
 
 
 def main1():

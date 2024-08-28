@@ -13,7 +13,10 @@ THRESHOLD = const.THRESHOLD
 ITERATIONNUM = const.ITERATIONNUM
 
 class Straightenable:
+    '''Class representing any straightenable mesh. Contains functionality for straightening,
+    rotating, and calculating diameter'''
     def __init__(self):
+        '''Initializes the fields of the Straightenable'''
         # Unchanging
         self.VECTORCOUNT  = None
         self.OGVECTORLIST = None
@@ -55,6 +58,8 @@ class Straightenable:
         self.DEFAULTRESOLUTION = .01
 
     def getGreatestSpan(self):
+        '''Gets the greatest span of the mesh as a . Sets the
+        internal field too'''
         if self.greatestSpanUpdated == False:
             # Sets axisIdx as well
             self.greatestSpan = va.greatestSpan(self)
@@ -107,6 +112,7 @@ class Straightenable:
         return self.centroids
 
     def fitGeometry(self):
+        '''Fits the mesh's centerline to the targeted axis'''
         self.getCentroids()
         if self.isAutoTargetAxis:
             self.autoSetTargetAxis()
@@ -151,7 +157,10 @@ class Straightenable:
     
     # Make a diameter function for different slices
 
-    def atThreshold(self):
+    def atThreshold(self) -> bool:
+        '''Checks if the mesh has reached the target arclength threshold by
+        checking if the last arclength (radius * angle) is below the set arclength
+        '''
         pt = self.getCentroids()[0] # Take a point from somewhere
         radius = np.linalg.norm(pt - self.datamean)  # Get the dist
         c = 0
@@ -166,7 +175,8 @@ class Straightenable:
         else:
             return False
         
-    def rotate(self, rotation, radians = True):
+    def rotate(self, rotation: tuple[float, float, float], radians = True):
+        '''Rotates the given mesh by the given angles'''
         if not radians:
             for axis, theta in rotation:
                 rotation[axis] = theta * np.pi / 180
@@ -197,11 +207,13 @@ class Straightenable:
         self.computeDiameter()
         return self.diameter
     def getCenters(self):
+        '''Gets the list of centers used in calculating the diameter'''
         if self.diameterUpdated:
             return self.centers
         self.computeDiameter()
         return self.centers
     def getDatamean(self):
+        '''Gets the datamean or centroid of the mesh'''
         print(f"datamean updated: {self.datameanUpdated}")
         if self.datameanUpdated == False:
             print("Updating datamean")
@@ -218,9 +230,9 @@ class Straightenable:
             return self.vectorList
         self.sortPoints()
         return self.vectorList
-    # For data purposes, gets the single avg diameter across
-    # entire channel
-    def getEntireDiameter(self, width):
+    
+    def getAverageDiameter(self, width: float = 0) -> float:
+        '''Gets the average diameter across the channel'''
         self.getCentroids()
         if not self.diameterUpdated:
             self.diameter, centers = va.condenseDiameterByChunk(self.axisIdx, width, self)
@@ -314,8 +326,8 @@ class Straightenable:
         self.dprint(f"Min: {self.vectorList[-1]}, Max: {self.vectorList[0]}", debug)
         vp.plotCenterLine(self.centroids, ax, min, max)
 
-    # Shows centroids, centerline, mesh, and axes
     def show(self, resolution = 1, debug = False):
+        ''' Shows centroids, centerline, mesh, and axes '''
         ax1 = plt.axes(projection = '3d')
         self.plotCentroids(ax1)
         self.dprint(f"\nPlotting", debug)
@@ -348,7 +360,8 @@ class Straightenable:
 
     # Mostly deprecated, use chunkdiameter to show diameter plotted
     # along slice centerlines
-    def plotDiameter(self, ax):
+    def plotDiameter(self, ax, name: str):
+        '''Deprecated, plots the diameter plot of the mesh with no averaging'''
         self.getCentroids()
         self.computeDiameter()
         vp.plotDiameter(ax, self.getDiameter())
@@ -367,23 +380,18 @@ class Straightenable:
         plt.xlabel(f"{axis} axis")
         plt.ylabel("Diameter")
         ax.set_ylim([0, None])
-        plt.title("Diameter across the longest axis")
+        plt.title("Diameter across the longest axis\n" + name)
 
-    def showDiameter(self, ax: plt.Axes = plt.axes()):
-        self.plotDiameter()
+    def showDiameter(self, ax: plt.Axes, name):
+        self.plotDiameter(ax, name)
         plt.show()
-    
-    # Shows plot for diameter and centers
-    def plotDiameterInfo(self):
-        self.plotDiameter()
-        self.showCenters(self.getCenters())
 
-    def saveDiameterPlot(self, filepath : str):
+    def saveDiameterPlot(self, filepath : str, filename : str = None):
         '''Saves the diameter plot to the given filepath'''
         plt.clf()
 
         ax = plt.axes()
-        self.plotDiameter(ax)
+        self.plotDiameter(ax, filename)
         plt.savefig(filepath, format= "png")
 
     def showCenters(self, centers):

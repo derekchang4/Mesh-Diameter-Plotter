@@ -30,13 +30,14 @@ SKIPLEN = const.SKIPLEN
 
 MINISLICES = const.MINISLICES
 
-def dprint(string, debug = False):
+def dprint(string, debug = False) -> None:
+    '''A simple debugging print statement with an if condition'''
     if (debug):
         print(string)
 
-def greatestSpan(mesh: strn.Straightenable):
+def greatestSpan(mesh: strn.Straightenable) -> tuple[int, float]:
     ''' Finds the axis with the greatest span
- and returns the letter and span of that axis'''
+ and returns the axisIdx and span of that axis'''
     sampleVector = mesh.vectorList[0]                    #Get some vector
     xMin = sampleVector[0]
     xMax = sampleVector[0]

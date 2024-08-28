@@ -165,7 +165,7 @@ class GUI_Handler:
         # TODO: Add functionality to intake width
         # Apply any settings
         self.updateState()
-        self.diameter = self.mesh.getEntireDiameter(self.diameterWidth)
+        self.diameter = self.mesh.getAverageDiameter(self.diameterWidth)
         # Display the new diameter
         self.updateInfoLabels()
         self.mesh.showChunkDiameter(specifiedWidth = 0)
@@ -173,7 +173,7 @@ class GUI_Handler:
     def getDiameter(self):
         self.checkMesh()
         self.updateState()
-        self.diameter = self.mesh.getEntireDiameter(self.diameterWidth)
+        self.diameter = self.mesh.getAverageDiameter(self.diameterWidth)
         self.updateInfoLabels()
 
     def reset(self):
